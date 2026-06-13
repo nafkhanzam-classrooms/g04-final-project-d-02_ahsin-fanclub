@@ -400,3 +400,194 @@ class TextBox:
     def clear(self) -> None:
         """Clear the textbox."""
         self.text = ""
+
+class Panel:
+    """
+    Reusable rounded rectangular panel.
+
+    Used for:
+        - Room code containers
+        - Player lists
+        - Dialog boxes
+        - Scoreboards
+    """
+
+    def __init__(
+        self,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        background: tuple[int, int, int] = (30, 35, 50),
+        border: tuple[int, int, int] = (80, 90, 120),
+        border_radius: int = 10,
+        border_width: int = 2,
+    ) -> None:
+        self.rect = pygame.Rect(
+            x,
+            y,
+            width,
+            height,
+        )
+
+        self.background = background
+        self.border = border
+        self.border_radius = border_radius
+        self.border_width = border_width
+
+    def render(self, screen: pygame.Surface) -> None:
+        pygame.draw.rect(
+            screen,
+            self.background,
+            self.rect,
+            border_radius=self.border_radius,
+        )
+
+        pygame.draw.rect(
+            screen,
+            self.border,
+            self.rect,
+            self.border_width,
+            border_radius=self.border_radius,
+        )
+
+class RoomCodeCard:
+    """
+    Displays the room code inside a styled panel.
+    """
+
+    def __init__(
+        self,
+        x: int,
+        y: int,
+        width: int = 360,
+        height: int = 60,
+        room_code: str = "",
+    ) -> None:
+        self.panel = Panel(
+            x,
+            y,
+            width,
+            height,
+        )
+
+        self.room_code = room_code
+
+        self._font = pygame.font.SysFont(
+            "Arial",
+            28,
+            bold=True,
+        )
+
+    def set_room_code(self, room_code: str) -> None:
+        self.room_code = room_code
+
+    def render(
+        self,
+        screen: pygame.Surface,
+    ) -> None:
+        self.panel.render(screen)
+
+        text = self._font.render(
+            f"Room Code: {self.room_code}",
+            True,
+            (220, 220, 230),
+        )
+
+        screen.blit(
+            text,
+            (
+                self.panel.rect.centerx
+                - text.get_width() // 2,
+                self.panel.rect.centery
+                - text.get_height() // 2,
+            ),
+        )
+
+class PlayerEntry:
+    """
+    Represents one player row inside the lobby.
+    """
+
+    def __init__(
+        self,
+        x: int,
+        y: int,
+        width: int,
+        username: str,
+        is_host: bool = False,
+        can_kick: bool = False,
+        on_kick: Callable[[], None] | None = None,
+    ) -> None:
+        self.rect = pygame.Rect(
+            x,
+            y,
+            width,
+            45,
+        )
+
+        self.username = username
+        self.is_host = is_host
+        self.can_kick = can_kick
+
+        self._font = pygame.font.SysFont(
+            "Arial",
+            22,
+        )
+
+        self._kick_button = None
+
+        if can_kick:
+            self._kick_button = Button(
+                x=self.rect.right - 90,
+                y=self.rect.y + 5,
+                width=80,
+                height=35,
+                text="KICK",
+                on_click=on_kick,
+                font_size=18,
+            )
+            
+    def handle_event(
+        self,
+        event: pygame.event.Event,
+    ) -> bool:
+        if self._kick_button:
+            return self._kick_button.handle_event(event)
+
+        return False
+    
+    def render(
+        self,
+        screen: pygame.Surface,
+    ) -> None:
+
+        pygame.draw.rect(
+            screen,
+            (40, 44, 60),
+            self.rect,
+            border_radius=8,
+        )
+
+        text = self.username
+
+        if self.is_host:
+            text += " (Host)"
+
+        surf = self._font.render(
+            text,
+            True,
+            (220, 220, 230),
+        )
+
+        screen.blit(
+            surf,
+            (
+                self.rect.x + 15,
+                self.rect.centery
+                - surf.get_height() // 2,
+            ),
+        )
+
+        if self._kick_button:
+            self._kick_button.render(screen)

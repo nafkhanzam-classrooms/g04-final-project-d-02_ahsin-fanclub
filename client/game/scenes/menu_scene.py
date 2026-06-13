@@ -72,6 +72,27 @@ class MenuScene(Scene):
         )
 
         btn_w, btn_h = 240, 55
+
+        self._play_btn = Button(
+            x=sw // 2 - btn_w // 2,
+            y=sh // 2 + 20,
+            width=btn_w,
+            height=btn_h,
+            text="CREATE A ROOM",
+            on_click=self._on_create_room,
+            font_size=26,
+        )
+
+        self._play_btn = Button(
+            x=sw // 2 - btn_w // 2,
+            y=sh // 2 + 20,
+            width=btn_w,
+            height=btn_h,
+            text="JOIN ROOM",
+            on_click=self._on_join_room,
+            font_size=26,
+        )
+
         self._play_btn = Button(
             x=sw // 2 - btn_w // 2,
             y=sh // 2 + 20,
@@ -182,6 +203,16 @@ class MenuScene(Scene):
 
         self.app.username = username
         self.app.scene_manager.switch("matchmaking")
+
+    def _on_create_room(self) -> None:
+        """Switch to creating room scene."""
+        username = self._username_box.get_text().strip()
+
+        if not username:
+            return
+
+        self.app.username = username
+        self.app.scene_manager.switch("create_room")
 
     def _on_quit(self) -> None:
         """Quit the game."""
