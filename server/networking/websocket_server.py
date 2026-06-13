@@ -179,6 +179,7 @@ class WebSocketServer:
         self._router.register("join_queue", self._handle_join_queue)
         self._router.register("cancel_queue", self._handle_cancel_queue)
         self._router.register("create_room", self._handle_create_room)
+        self._router.register("join_room", self._handle_join_room)
         self._router.register("start_room", self._handle_start_room)
         self._router.register("leave_room", self._handle_leave_room)
         self._router.register("input", self._handle_input)
@@ -196,6 +197,9 @@ class WebSocketServer:
             await self._send_error(player_id, "Username too long.")
             return
         self._sessions[player_id].name = username
+        if self._sessions[player_id].room_id:
+            await self._send_error(player_id, "Leave your current room first.")
+            return
         
         await self._matchmaking.add_player(player_id)
 
@@ -213,11 +217,39 @@ class WebSocketServer:
             await self._send_error(player_id, "You are already in a room.")
             return
 
+        await self._matchmaking.remove_player(player_id)
         username = message.get("username", "").strip()
         if username:
             session.name = username[:16]
 
-        room = self._room_manager.create_room([player_id], self._sessions)
+        room = self._room_manager.create_room([player_id])
+        await self._room_manager.broadcast_room_state(room)
+
+    async def _handle_join_room(self, player_id: int, message: dict[str, Any]) -> None:
+        """Join an existing private room by code."""
+        session = self._sessions.get(player_id)
+        if session is None:
+            return
+
+        if session.room_id:
+            await self._send_error(player_id, "You are already in a room.")
+            return
+
+        room_code = str(message.get("room_code", "")).strip()
+        if not room_code:
+            await self._send_error(player_id, "Room code cannot be empty.")
+            return
+
+        username = message.get("username", "").strip()
+        if username:
+            session.name = username[:16]
+
+        await self._matchmaking.remove_player(player_id)
+        room = self._room_manager.join_room(room_code, player_id)
+        if room is None:
+            await self._send_error(player_id, "Room not found or not joinable.")
+            return
+
         await self._room_manager.broadcast_room_state(room)
 
     async def _handle_start_room(self, player_id: int, message: dict[str, Any]) -> None:
@@ -244,6 +276,10 @@ class WebSocketServer:
         await self._room_manager.remove_player_from_room(player_id)
         self._sessions[player_id].room_id = None
         self._sessions[player_id].state = PlayerState.CONNECTED
+
+    async def _send_error(self, player_id: int, message: str) -> None:
+        """Send an error payload to a player."""
+        await self._send_to_player(player_id, ErrorPayload(message=message).to_dict())
 
     async def _handle_input(self, player_id: int, message: dict[str, Any]) -> None:
         """Handle a player input (direction change)."""

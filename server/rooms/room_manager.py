@@ -11,9 +11,9 @@ import logging
 import uuid
 from typing import Any, Callable, Coroutine
 
-from server.rooms.room import Room, RoomState
-from server.rooms.player_session import PlayerSession
 from server.shared.constants import MAX_PLAYERS_PER_ROOM
+from server.rooms.room import Room, RoomState
+from server.rooms.player_session import PlayerSession, PlayerState
 from server.shared.schemas import RoomPlayer, RoomStatePayload
 
 logger = logging.getLogger(__name__)
@@ -37,29 +37,36 @@ class RoomManager:
 
     # ----- Room creation -----
 
-    def create_room(self, player_ids: list[int], sessions: dict[int, PlayerSession]) -> Room:
+    def _generate_room_code(self) -> str:
+        """Generate a unique 6-digit room code."""
+        while True:
+            room_id = f"{uuid.uuid4().int % 900000 + 100000:06d}"
+            if room_id not in self._rooms:
+                return room_id
+
+    def create_room(self, player_ids: list[int]) -> Room:
         """
         Create a new room with the given players.
 
         Args:
             player_ids: List of player IDs to add.
-            sessions:   Player session map (for names).
 
         Returns:
             The newly created Room.
         """
-        room_id = f"room_{uuid.uuid4().hex[:8]}"
+        room_id = self._generate_room_code()
         room = Room(room_id=room_id)
         room.set_send_callback(self._send_callback)
         room.set_finish_callback(self._on_room_finished)
 
         for pid in player_ids:
-            name = sessions[pid].name if pid in sessions else f"Player {pid}"
+            name = self._sessions[pid].name if pid in self._sessions else f"Player {pid}"
             room.add_player(pid, name)
             self._player_room[pid] = room_id
             session = self._sessions.get(pid)
             if session:
                 session.room_id = room_id
+                session.state = PlayerState.IN_ROOM
 
         self._rooms[room_id] = room
         logger.info(
@@ -67,6 +74,41 @@ class RoomManager:
             room_id,
             player_ids,
         )
+        return room
+
+    def join_room(self, room_id: str, player_id: int) -> Room | None:
+        """Add a player to an existing room if it can accept them."""
+        room = self._rooms.get(room_id)
+        if room is None:
+            return None
+        if room.state != RoomState.WAITING:
+            return None
+        if room.is_full:
+            return None
+        if player_id in self._player_room:
+            return None
+
+        name = self._sessions[player_id].name if player_id in self._sessions else f"Player {player_id}"
+        room.add_player(player_id, name)
+        self._player_room[player_id] = room_id
+        session = self._sessions.get(player_id)
+        if session:
+            session.room_id = room_id
+            session.state = PlayerState.IN_ROOM
+        return room
+
+    def leave_room(self, player_id: int) -> Room | None:
+        """Remove a player from their current room and return the room."""
+        room_id = self._player_room.pop(player_id, None)
+        if room_id is None:
+            return None
+        room = self._rooms.get(room_id)
+        if room is None:
+            return None
+        room.remove_player(player_id)
+        session = self._sessions.get(player_id)
+        if session:
+            session.room_id = None
         return room
 
     def build_room_state(self, room: Room) -> dict[str, Any]:
@@ -120,23 +162,14 @@ class RoomManager:
 
     async def remove_player_from_room(self, player_id: int) -> None:
         """Remove a player from their current room."""
-        room_id = self._player_room.pop(player_id, None)
-        if room_id is None:
-            return
-
-        room = self._rooms.get(room_id)
+        room = self.leave_room(player_id)
         if room is None:
             return
-
-        room.remove_player(player_id)
-        session = self._sessions.get(player_id)
-        if session:
-            session.room_id = None
-        logger.info("Removed player %d from room %s", player_id, room_id)
+        logger.info("Removed player %d from room %s", player_id, room.room_id)
 
         # If room is empty or has too few players during game, destroy it
         if room.player_count == 0:
-            await self._destroy_room(room_id)
+            await self._destroy_room(room.room_id)
         else:
             await self.broadcast_room_state(room)
 

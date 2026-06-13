@@ -73,9 +73,25 @@ class WebSocketClient:
 
         Returns True on success, False on failure.
         """
+        if self._connected and self._ws is not None:
+            return True
+
         self._server_uri = uri or DEFAULT_SERVER_URI
 
         try:
+            if self._recv_task and not self._recv_task.done():
+                self._recv_task.cancel()
+                try:
+                    await self._recv_task
+                except asyncio.CancelledError:
+                    pass
+
+            if self._ws is not None:
+                try:
+                    await self._ws.close()
+                except Exception:
+                    pass
+
             self._ws = await websockets.connect(
                 self._server_uri,
                 max_size=2**20,  # 1 MiB
@@ -168,6 +184,7 @@ class WebSocketClient:
         was_connected = self._connected
         self._connected = False
         self._ws = None
+        self._recv_task = None
         if was_connected:
             self._dispatcher.dispatch(
                 "error",

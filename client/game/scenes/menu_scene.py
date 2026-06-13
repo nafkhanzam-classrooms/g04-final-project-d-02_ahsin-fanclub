@@ -17,6 +17,7 @@ import pygame
 from game.scene_manager import Scene
 from game.ui.widgets import Button, Label, TextBox
 from game.scenes.join_room_modal import JoinRoomModal
+from game.networking.protocol import make_join_room_message
 
 if TYPE_CHECKING:
     from game.game_app import GameApp
@@ -44,8 +45,8 @@ class MenuScene(Scene):
         self._error_timer: float = 0.0
 
         self._join_modal = JoinRoomModal(
-            screen_size = app.screen_size,
-            # on_join = self._join_room_code
+            screen_size=app.screen_size,
+            on_join=self._join_room_code,
         )
 
         self._title = Label(
@@ -243,7 +244,7 @@ class MenuScene(Scene):
             return
 
         self.app.username = username
-        self.app.scene_manager.switch("lobby")
+        self.app.scene_manager.switch("create_room")
 
     def _on_quit(self) -> None:
         """Quit the game."""
@@ -263,3 +264,17 @@ class MenuScene(Scene):
 
         self.app.username = username
         self._join_modal.open()
+
+    def _join_room_code(self, room_code: str) -> None:
+        if not self.app.username:
+            self._show_error("Username cannot be empty.")
+            return
+        import asyncio
+        async def _join() -> None:
+            client = self.app.network_client
+            if not client.connected and not await client.connect():
+                self._show_error("Could not connect to server.")
+                return
+            await client.send(make_join_room_message(self.app.username, room_code))
+            self.app.scene_manager.switch("lobby")
+        asyncio.ensure_future(_join())

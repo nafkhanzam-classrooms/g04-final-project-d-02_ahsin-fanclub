@@ -105,7 +105,7 @@ class MatchmakingService:
                     session.state = PlayerState.IN_ROOM
 
             # Create the room
-            room = self._room_manager.create_room(player_ids, self._sessions)
+            room = self._room_manager.create_room(player_ids)
 
             # Start the countdown in a background task
             asyncio.create_task(room.start_countdown())

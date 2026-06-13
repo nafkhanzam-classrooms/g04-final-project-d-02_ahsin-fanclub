@@ -1,223 +1,121 @@
 """
-Create Room Scene — Requests a server-hosted private room.
+Lobby Scene — shows an existing private room after joining.
 """
 
 from __future__ import annotations
 
 import asyncio
-import math
-import random
-import time
 from typing import TYPE_CHECKING, Any
 
 import pygame
 
-from game.networking.protocol import (
-    make_create_room_message,
-    make_leave_room_message,
-    make_start_room_message,
-)
+from game.networking.protocol import make_leave_room_message, make_start_room_message
 from game.scene_manager import Scene
-from game.ui.widgets import Button, Label, Panel, PlayerEntry, RoomCodeCard
+from game.ui.widgets import Button, Label
 
 if TYPE_CHECKING:
     from game.game_app import GameApp
 
 
-COLOR_BG_TOP = (10, 10, 30)
-COLOR_BG_BOTTOM = (20, 15, 50)
-COLOR_TITLE = (100, 220, 255)
-COLOR_PARTICLE = (60, 80, 200)
-
-
 class LobbyScene(Scene):
-    """Server-backed room creation lobby."""
-
     def __init__(self, app: "GameApp") -> None:
         super().__init__(app)
-
         sw, sh = app.screen_size
-        self._start_time = time.monotonic()
+        self._title = Label("ROOM LOBBY", x=sw // 2, y=40, color=(220, 230, 255), font_size=36, centered=True, bold=True)
+        self._room_code = Label("", x=sw // 2, y=90, color=(150, 190, 255), font_size=22, centered=True)
+        self._host_label = Label("", x=sw // 2, y=125, color=(170, 170, 195), font_size=18, centered=True)
+        self._status_label = Label("", x=sw // 2, y=155, color=(140, 140, 160), font_size=16, centered=True)
+        btn_w, btn_h = 220, 50
+        self._start_btn = Button(x=sw // 2 - btn_w - 12, y=sh - 90, width=btn_w, height=btn_h, text="START MATCH", on_click=self._on_start, font_size=20)
+        self._leave_btn = Button(x=sw // 2 + 12, y=sh - 90, width=btn_w, height=btn_h, text="LEAVE ROOM", on_click=self._on_leave, font_size=20)
+        self._players: list[dict[str, Any]] = []
         self._room_state: dict[str, Any] = {}
-        self._status_text = "Creating room..."
-
-        self._title = Label(
-            "CREATE ROOM",
-            x=sw // 2,
-            y=70,
-            color=COLOR_TITLE,
-            font_size=48,
-            centered=True,
-            bold=True,
-        )
-        self._room_code_card = RoomCodeCard(x=sw // 2 - 180, y=120)
-        self._player_panel = Panel(x=sw // 2 - 300, y=220, width=600, height=260)
-        self._player_entries: list[PlayerEntry] = []
-        self._status_label = Label(
-            self._status_text,
-            x=sw // 2,
-            y=190,
-            color=(180, 180, 210),
-            font_size=16,
-            centered=True,
-        )
-
-        self._start_button = Button(
-            x=sw // 2 - 120,
-            y=sh - 130,
-            width=240,
-            height=50,
-            text="START GAME",
-            on_click=self._on_start_game,
-        )
-        self._back_button = Button(
-            x=sw // 2 - 120,
-            y=sh - 65,
-            width=240,
-            height=50,
-            text="BACK",
-            on_click=self._on_back,
-        )
-
-        self._particles = []
-        for _ in range(40):
-            self._particles.append(
-                {
-                    "x": random.uniform(0, sw),
-                    "y": random.uniform(0, sh),
-                    "speed": random.uniform(10, 40),
-                    "size": random.randint(1, 3),
-                    "phase": random.uniform(0, math.tau),
-                }
-            )
+        self._status_override: str | None = None
 
     def enter(self) -> None:
-        dispatcher = self.app.event_dispatcher
-        dispatcher.subscribe("room_state", self._on_room_state)
-        dispatcher.subscribe("error", self._on_error)
-        self._apply_room_state({})
-        asyncio.ensure_future(self._connect_and_create_room())
+        d = self.app.event_dispatcher
+        d.subscribe("room_state", self._on_room_state)
+        d.subscribe("match_found", self._on_match_found)
+        d.subscribe("error", self._on_error)
+        if self.app.room_state:
+            self._apply_room_state(self.app.room_state)
 
     def exit(self) -> None:
-        dispatcher = self.app.event_dispatcher
-        dispatcher.unsubscribe("room_state", self._on_room_state)
-        dispatcher.unsubscribe("error", self._on_error)
+        d = self.app.event_dispatcher
+        d.unsubscribe("room_state", self._on_room_state)
+        d.unsubscribe("match_found", self._on_match_found)
+        d.unsubscribe("error", self._on_error)
 
     def handle_event(self, event: pygame.event.Event) -> None:
-        self._start_button.handle_event(event)
-        self._back_button.handle_event(event)
-        for entry in self._player_entries:
-            entry.handle_event(event)
+        self._start_btn.handle_event(event)
+        self._leave_btn.handle_event(event)
 
     def update(self, dt: float) -> None:
-        sw, sh = self.app.screen_size
-        for p in self._particles:
-            p["y"] -= p["speed"] * dt
-            if p["y"] < -10:
-                p["y"] = sh + 10
-                p["x"] = random.uniform(0, sw)
-
-        self._status_label.text = self._status_text
         room = self._room_state
-        if room:
-            is_host = room.get("host_player_id") == room.get("local_player_id", -1)
-            self._start_button.on_click = self._on_start_game if is_host and room.get("can_start") else None
-            self._start_button.text = "START GAME" if self._start_button.on_click else "WAITING FOR HOST"
+        if not room:
+            return
+        state = room.get("state", "waiting")
+        player_count = room.get("player_count", 0)
+        max_players = room.get("max_players", 0)
+        self._status_label.text = self._status_override or f"State: {state.upper()}  Players: {player_count}/{max_players}"
+        current = room.get("local_player_id", -1)
+        self._start_btn.on_click = self._on_start if room.get("host_player_id") == current and room.get("can_start") else None
+        self._start_btn.text = "START MATCH" if self._start_btn.on_click else "WAITING FOR HOST"
 
     def render(self, screen: pygame.Surface) -> None:
-        sw, sh = screen.get_size()
-        elapsed = time.monotonic() - self._start_time
-
-        for y_line in range(sh):
-            ratio = y_line / sh
-            r = int(COLOR_BG_TOP[0] + (COLOR_BG_BOTTOM[0] - COLOR_BG_TOP[0]) * ratio)
-            g = int(COLOR_BG_TOP[1] + (COLOR_BG_BOTTOM[1] - COLOR_BG_TOP[1]) * ratio)
-            b = int(COLOR_BG_TOP[2] + (COLOR_BG_BOTTOM[2] - COLOR_BG_TOP[2]) * ratio)
-            pygame.draw.line(screen, (r, g, b), (0, y_line), (sw, y_line))
-
-        for p in self._particles:
-            alpha = 0.4 + 0.3 * math.sin(elapsed * 1.5 + p["phase"])
-            c = (
-                int(COLOR_PARTICLE[0] * alpha),
-                int(COLOR_PARTICLE[1] * alpha),
-                int(COLOR_PARTICLE[2] * alpha),
-            )
-            pygame.draw.circle(screen, c, (int(p["x"]), int(p["y"])), p["size"])
-
+        screen.fill((12, 12, 24))
         self._title.render(screen)
-        self._room_code_card.render(screen)
+        self._room_code.render(screen)
+        self._host_label.render(screen)
         self._status_label.render(screen)
-        self._player_panel.render(screen)
-        for entry in self._player_entries:
-            entry.render(screen)
-        self._start_button.render(screen)
-        self._back_button.render(screen)
-
-    async def _connect_and_create_room(self) -> None:
-        client = self.app.network_client
-        if not client.connected:
-            success = await client.connect()
-            if not success:
-                self._status_text = "Connection failed."
-                return
-
-        await client.send(make_create_room_message(self.app.username))
+        panel = pygame.Rect(140, 190, screen.get_width() - 280, screen.get_height() - 300)
+        pygame.draw.rect(screen, (24, 26, 38), panel, border_radius=8)
+        pygame.draw.rect(screen, (60, 70, 100), panel, 2, border_radius=8)
+        font = pygame.font.SysFont("Arial", 20, bold=True)
+        row_font = pygame.font.SysFont("Arial", 18)
+        screen.blit(font.render("PLAYERS", True, (210, 220, 240)), (panel.x + 20, panel.y + 16))
+        y = panel.y + 54
+        for player in self._players:
+            name = str(player.get("name", "Unknown"))
+            marker = "HOST  " if player.get("is_host") else ""
+            screen.blit(row_font.render(f"{marker}{name}", True, (220, 220, 225)), (panel.x + 20, y))
+            y += 28
+        self._start_btn.render(screen)
+        self._leave_btn.render(screen)
 
     def _apply_room_state(self, data: dict[str, Any]) -> None:
         self._room_state = data
-        if data:
-            self.app.room_state = data
-            room_id = data.get("room_id", "UNKNOWN")
-            self._room_code_card.set_room_code(str(room_id))
-            self._status_text = f"Room {room_id} ready"
-            players = [str(player.get("name", "Unknown")) for player in data.get("players", [])]
-            self._player_entries = self._make_player_entries(players)
-        else:
-            self.app.room_state = {}
-            self._room_code_card.set_room_code("PENDING")
-            self._status_text = "Creating room..."
-            self._player_entries = self._make_player_entries([self.app.username])
-
-    def _make_player_entries(self, usernames: list[str]) -> list[PlayerEntry]:
-        entries: list[PlayerEntry] = []
-        start_x = self._player_panel.rect.x + 20
-        start_y = self._player_panel.rect.y + 20
-        width = self._player_panel.rect.width - 40
-
-        for i, username in enumerate(usernames):
-            is_host = i == 0
-            entries.append(
-                PlayerEntry(
-                    x=start_x,
-                    y=start_y + i * 55,
-                    width=width,
-                    username=username,
-                    is_host=is_host,
-                    can_kick=not is_host,
-                    on_kick=lambda name=username: self._kick_player(name),
-                )
-            )
-        return entries
-
-    def _kick_player(self, username: str) -> None:
-        self._status_text = f"Kick not implemented for {username}"
+        self.app.room_state = data
+        self._players = list(data.get("players", []))
+        self._room_code.text = f"Room Code: {data.get('room_id', 'unknown')}"
+        host_id = data.get("host_player_id", -1)
+        host_name = "Unknown"
+        for player in self._players:
+            if player.get("is_host"):
+                host_name = str(player.get("name", "Unknown"))
+                break
+        self._host_label.text = f"Host: {host_name} ({host_id})"
 
     def _on_room_state(self, data: dict[str, Any]) -> None:
         self._apply_room_state(data)
+        self._status_override = None
         if data.get("state") == "starting":
             self.app.match_data = data
             self.app.scene_manager.switch("loading")
-        else:
-            self.app.scene_manager.switch("lobby")
+
+    def _on_match_found(self, data: dict[str, Any]) -> None:
+        self.app.match_data = data
+        self.app.scene_manager.switch("loading")
 
     def _on_error(self, data: dict[str, Any]) -> None:
-        self._status_text = f"Error: {data.get('message', 'Unknown error')}"
+        self._status_override = f"Error: {data.get('message', 'Unknown error')}"
+        self._status_label.text = self._status_override
 
-    def _on_start_game(self) -> None:
+    def _on_start(self) -> None:
         if self.app.network_client.connected:
             asyncio.ensure_future(self.app.network_client.send(make_start_room_message()))
 
-    def _on_back(self) -> None:
+    def _on_leave(self) -> None:
         if self.app.network_client.connected:
             asyncio.ensure_future(self.app.network_client.send(make_leave_room_message()))
         self.app.room_state = {}

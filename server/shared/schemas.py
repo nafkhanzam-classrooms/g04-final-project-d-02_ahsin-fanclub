@@ -24,6 +24,7 @@ class ClientMessageType(str, Enum):
     INPUT = "input"
     PING = "ping"
     CREATE_ROOM = "create_room"
+    JOIN_ROOM = "join_room"
     START_ROOM = "start_room"
     LEAVE_ROOM = "leave_room"
 

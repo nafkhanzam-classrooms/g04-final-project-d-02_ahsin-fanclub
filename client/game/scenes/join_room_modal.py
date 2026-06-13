@@ -72,7 +72,7 @@ class JoinRoomModal:
             width=modal_w - 120,
             height=50,
             placeholder="Enter room code",
-            max_length=8,
+            max_length=6,
             on_enter=self._submit,
         )
 

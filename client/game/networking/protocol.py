@@ -23,6 +23,7 @@ class ClientMessageType(str, Enum):
     JOIN_QUEUE = "join_queue"
     CANCEL_QUEUE = "cancel_queue"
     CREATE_ROOM = "create_room"
+    JOIN_ROOM = "join_room"
     START_ROOM = "start_room"
     LEAVE_ROOM = "leave_room"
 
@@ -88,6 +89,15 @@ def make_create_room_message(username: str) -> bytes:
     return encode_message({
         "type": ClientMessageType.CREATE_ROOM.value,
         "username": username,
+    })
+
+
+def make_join_room_message(username: str, room_code: str) -> bytes:
+    """Create an encoded request to join a private room."""
+    return encode_message({
+        "type": ClientMessageType.JOIN_ROOM.value,
+        "username": username,
+        "room_code": room_code,
     })
 
 
