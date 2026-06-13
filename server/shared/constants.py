@@ -42,7 +42,7 @@ MATCH_DURATION: int = 180  # seconds
 # Snake defaults
 # =============================================================================
 
-SNAKE_INITIAL_LENGTH: int = 5
+SNAKE_INITIAL_LENGTH: int = 10
 SNAKE_BASE_SPEED: float = 120.0  # units per second
 SNAKE_TURN_RATE: float = 200.0   # degrees per second (smooth turning)
 SNAKE_SEGMENT_SPACING: float = 8.0  # pixels between segments

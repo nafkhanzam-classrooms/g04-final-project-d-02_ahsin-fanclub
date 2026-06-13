@@ -148,67 +148,63 @@ class Renderer:
         snake: SnakeData,
         is_local: bool,
     ) -> None:
-        """Draw a single snake with a glowing head and tapered body."""
+        """Draw a single snake with a uniform body and distinct head."""
         color = SNAKE_COLORS[snake.id % len(SNAKE_COLORS)]
 
         if not snake.segments:
             return
 
         segment_count = len(snake.segments)
+        size_scale = 1.0 + min(max(snake.length - 5, 0) * 0.015, 0.12)
+        segment_radius = max(4, int(9 * size_scale))
 
         # Draw body segments (back to front)
         for i in reversed(range(segment_count)):
             seg = snake.segments[i]
             sx, sy = self._camera.world_to_screen(seg.x, seg.y)
 
-            # Taper: head is largest, tail is smallest
-            progress = 1.0 - (i / max(segment_count, 1))
-            radius = max(3, int(10 * (0.4 + 0.6 * progress)))
+            fade = i / max(segment_count - 1, 1)
+            if i == 0:
+                body_color = color
+                outline_color = (
+                    min(255, color[0] + 30),
+                    min(255, color[1] + 30),
+                    min(255, color[2] + 30),
+                )
+            else:
+                body_color = (
+                    max(0, color[0] - int(18 * fade)),
+                    max(0, color[1] - int(18 * fade)),
+                    max(0, color[2] - int(18 * fade)),
+                )
+                outline_color = (
+                    min(255, body_color[0] + 20),
+                    min(255, body_color[1] + 20),
+                    min(255, body_color[2] + 20),
+                )
 
-            # Darken body segments slightly
-            body_color = (
-                max(0, color[0] - int(40 * (1.0 - progress))),
-                max(0, color[1] - int(40 * (1.0 - progress))),
-                max(0, color[2] - int(40 * (1.0 - progress))),
-            )
-
-            pygame.draw.circle(screen, body_color, (int(sx), int(sy)), radius)
-
-            # Outline
-            outline_color = (
-                min(255, body_color[0] + 30),
-                min(255, body_color[1] + 30),
-                min(255, body_color[2] + 30),
+            pygame.draw.circle(
+                screen, body_color, (int(sx), int(sy)), segment_radius
             )
             pygame.draw.circle(
-                screen, outline_color, (int(sx), int(sy)), radius, 2
+                screen, outline_color, (int(sx), int(sy)), segment_radius, 2
             )
 
-        # Draw head with glow effect
+        # Draw head
         head = snake.segments[0]
         hx, hy = self._camera.world_to_screen(head.x, head.y)
 
-        # Glow
-        glow_surf = pygame.Surface((40, 40), pygame.SRCALPHA)
-        glow_color = (*color, 60)
-        pygame.draw.circle(glow_surf, glow_color, (20, 20), 18)
-        screen.blit(
-            glow_surf,
-            (int(hx) - 20, int(hy) - 20),
-            special_flags=pygame.BLEND_RGBA_ADD,
-        )
-
         # Head circle
-        pygame.draw.circle(screen, color, (int(hx), int(hy)), 12)
+        pygame.draw.circle(screen, color, (int(hx), int(hy)), segment_radius)
 
         # Eyes
         angle_rad = math.radians(snake.direction)
-        eye_offset = 5
+        eye_offset = max(4, int(segment_radius * 0.45))
         for sign in (-1, 1):
             perp_angle = angle_rad + sign * math.pi / 2
             ex = hx + math.cos(perp_angle) * eye_offset
             ey = hy + math.sin(perp_angle) * eye_offset
-            pygame.draw.circle(screen, (255, 255, 255), (int(ex), int(ey)), 3)
+            pygame.draw.circle(screen, (255, 255, 255), (int(ex), int(ey)), 2)
             # Pupil
             px = ex + math.cos(angle_rad) * 1.5
             py = ey + math.sin(angle_rad) * 1.5

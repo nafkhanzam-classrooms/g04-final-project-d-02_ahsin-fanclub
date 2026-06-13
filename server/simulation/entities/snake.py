@@ -80,5 +80,13 @@ class Snake:
             "length": self.length,
             "score": self.score,
             "alive": self.alive,
+            "direction": round(self.direction, 1),
+            "segments": [
+                {
+                    "x": round(seg.x, 1),
+                    "y": round(seg.y, 1),
+                }
+                for seg in self.segments
+            ],
             "name": self.name,
         }

@@ -81,6 +81,15 @@ class MatchStartPayload:
 
 
 @dataclass
+class SnapshotSegment:
+    x: float
+    y: float
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"x": self.x, "y": self.y}
+
+
+@dataclass
 class SnapshotSnake:
     id: int
     x: float
@@ -88,6 +97,8 @@ class SnapshotSnake:
     length: int
     score: int
     alive: bool
+    direction: float = 0.0
+    segments: list[SnapshotSegment] = field(default_factory=list)
     name: str = ""
 
     def to_dict(self) -> dict[str, Any]:
@@ -98,6 +109,8 @@ class SnapshotSnake:
             "length": self.length,
             "score": self.score,
             "alive": self.alive,
+            "direction": self.direction,
+            "segments": [s.to_dict() for s in self.segments],
             "name": self.name,
         }
 

@@ -58,6 +58,11 @@ class SnakeData:
 
         Expected keys: id, x, y, length, score, alive
         """
+        segments = [
+            SnakeSegment(float(seg.get("x", 0.0)), float(seg.get("y", 0.0)))
+            for seg in data.get("segments", [])
+        ]
+
         return SnakeData(
             id=data.get("id", 0),
             x=float(data.get("x", 0)),
@@ -65,6 +70,8 @@ class SnakeData:
             length=data.get("length", 5),
             score=data.get("score", 0),
             alive=data.get("alive", True),
+            direction=float(data.get("direction", 0.0)),
+            segments=segments,
             name=data.get("name", ""),
         )
 
@@ -76,6 +83,9 @@ class SnakeData:
         interpolated history.  This is a fallback for rendering when the
         server only sends the head position.
         """
+        if self.segments:
+            return
+
         segment_spacing = 8.0  # pixels between segments
         self.segments = [SnakeSegment(self.x, self.y)]
 

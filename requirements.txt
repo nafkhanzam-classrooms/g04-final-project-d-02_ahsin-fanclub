@@ -1,0 +1,4 @@
+websockets
+msgpack
+pygame-ce
+pygame

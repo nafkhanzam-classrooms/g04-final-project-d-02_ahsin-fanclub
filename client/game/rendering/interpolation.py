@@ -45,7 +45,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from game.entities.food import FoodData
-from game.entities.snake import SnakeData
+from game.entities.snake import SnakeData, SnakeSegment
 from game.networking.snapshot_buffer import SnapshotBuffer
 
 
@@ -153,9 +153,9 @@ class SnapshotInterpolator:
         # Apply client-side prediction to local snake
         self._apply_prediction(snakes)
 
-        # Build segments for rendering
         for snake in snakes:
-            snake.build_segments()
+            if not snake.segments:
+                snake.build_segments()
 
         return InterpolatedState(
             snakes=snakes,
@@ -184,16 +184,7 @@ class SnapshotInterpolator:
             sb = snakes_b.get(sid)
 
             if sa and sb:
-                # Interpolate position
-                snake = SnakeData(
-                    id=sid,
-                    x=sa["x"] + (sb["x"] - sa["x"]) * alpha,
-                    y=sa["y"] + (sb["y"] - sa["y"]) * alpha,
-                    length=sb.get("length", sa.get("length", 5)),
-                    score=sb.get("score", sa.get("score", 0)),
-                    alive=sb.get("alive", True),
-                    name=sb.get("name", sa.get("name", "")),
-                )
+                snake = self._interpolate_snake(sa, sb, alpha)
             elif sb:
                 # New snake — snap to B
                 snake = SnakeData.from_server(sb)
@@ -210,9 +201,9 @@ class SnapshotInterpolator:
         # Apply prediction to local snake
         self._apply_prediction(snakes)
 
-        # Build segments
         for snake in snakes:
-            snake.build_segments()
+            if not snake.segments:
+                snake.build_segments()
 
         return InterpolatedState(
             snakes=snakes,
@@ -224,6 +215,92 @@ class SnapshotInterpolator:
             ),
             tick=data_b.get("tick", data_a.get("tick", 0)),
         )
+
+    def _interpolate_snake(
+        self,
+        sa: dict[str, Any],
+        sb: dict[str, Any],
+        alpha: float,
+    ) -> SnakeData:
+        """Interpolate a single snake between two snapshots."""
+        direction = self._interpolate_angle(
+            float(sa.get("direction", 0.0)),
+            float(sb.get("direction", 0.0)),
+            alpha,
+        )
+
+        snake = SnakeData(
+            id=sb.get("id", sa.get("id", 0)),
+            x=sa["x"] + (sb["x"] - sa["x"]) * alpha,
+            y=sa["y"] + (sb["y"] - sa["y"]) * alpha,
+            length=sb.get("length", sa.get("length", 5)),
+            score=sb.get("score", sa.get("score", 0)),
+            alive=sb.get("alive", True),
+            direction=direction,
+            segments=self._interpolate_segments(
+                sa.get("segments", []),
+                sb.get("segments", []),
+                alpha,
+            ),
+            name=sb.get("name", sa.get("name", "")),
+        )
+        return snake
+
+    @staticmethod
+    def _interpolate_angle(a: float, b: float, alpha: float) -> float:
+        """Interpolate between two angles in degrees using the shortest arc."""
+        diff = b - a
+        while diff > 180:
+            diff -= 360
+        while diff < -180:
+            diff += 360
+        return (a + diff * alpha) % 360
+
+    @staticmethod
+    def _interpolate_segments(
+        segs_a: list[dict[str, Any]],
+        segs_b: list[dict[str, Any]],
+        alpha: float,
+    ) -> list[SnakeSegment]:
+        """Interpolate matching segment positions from two snapshots."""
+        if not segs_a and not segs_b:
+            return []
+        if not segs_a:
+            return [
+                SnakeSegment(float(seg.get("x", 0.0)), float(seg.get("y", 0.0)))
+                for seg in segs_b
+            ]
+        if not segs_b:
+            return [
+                SnakeSegment(float(seg.get("x", 0.0)), float(seg.get("y", 0.0)))
+                for seg in segs_a
+            ]
+
+        max_len = max(len(segs_a), len(segs_b))
+        result: list[SnakeSegment] = []
+        for i in range(max_len):
+            if i < len(segs_a) and i < len(segs_b):
+                ax = float(segs_a[i].get("x", 0.0))
+                ay = float(segs_a[i].get("y", 0.0))
+                bx = float(segs_b[i].get("x", 0.0))
+                by = float(segs_b[i].get("y", 0.0))
+                result.append(
+                    SnakeSegment(
+                        ax + (bx - ax) * alpha,
+                        ay + (by - ay) * alpha,
+                    )
+                )
+            elif i < len(segs_b):
+                seg = segs_b[i]
+                result.append(
+                    SnakeSegment(float(seg.get("x", 0.0)), float(seg.get("y", 0.0)))
+                )
+            else:
+                seg = segs_a[i]
+                result.append(
+                    SnakeSegment(float(seg.get("x", 0.0)), float(seg.get("y", 0.0)))
+                )
+        return result
 
     def _apply_prediction(self, snakes: list[SnakeData]) -> None:
         """

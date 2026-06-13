@@ -1,10 +1,3 @@
-"""
-Elimination System — Handles snake death.
-
-When a snake dies, this system marks it dead, converts body segments
-to food, and records the elimination.
-"""
-
 from __future__ import annotations
 
 from server.shared.constants import DEATH_FOOD_RATIO
