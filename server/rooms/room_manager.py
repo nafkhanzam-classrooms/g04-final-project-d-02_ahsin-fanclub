@@ -13,6 +13,8 @@ from typing import Any, Callable, Coroutine
 
 from server.rooms.room import Room, RoomState
 from server.rooms.player_session import PlayerSession
+from server.shared.constants import MAX_PLAYERS_PER_ROOM
+from server.shared.schemas import RoomPlayer, RoomStatePayload
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +29,11 @@ class RoomManager:
     Provides room creation, lookup by ID or player, and cleanup.
     """
 
-    def __init__(self, send_callback: SendCallback) -> None:
+    def __init__(self, send_callback: SendCallback, sessions: dict[int, PlayerSession]) -> None:
         self._rooms: dict[str, Room] = {}
         self._player_room: dict[int, str] = {}  # player_id → room_id
         self._send_callback: SendCallback = send_callback
+        self._sessions: dict[int, PlayerSession] = sessions
 
     # ----- Room creation -----
 
@@ -54,6 +57,9 @@ class RoomManager:
             name = sessions[pid].name if pid in sessions else f"Player {pid}"
             room.add_player(pid, name)
             self._player_room[pid] = room_id
+            session = self._sessions.get(pid)
+            if session:
+                session.room_id = room_id
 
         self._rooms[room_id] = room
         logger.info(
@@ -62,6 +68,35 @@ class RoomManager:
             player_ids,
         )
         return room
+
+    def build_room_state(self, room: Room) -> dict[str, Any]:
+        """Build a client-facing room state payload."""
+        host_player_id = room.player_ids[0] if room.player_ids else -1
+        players = [
+            RoomPlayer(
+                player_id=pid,
+                name=room._player_names.get(pid, f"Player {pid}"),
+                is_host=(pid == host_player_id),
+            )
+            for pid in room.player_ids
+        ]
+        can_start = room.state == RoomState.WAITING and len(room.player_ids) >= 1
+        return RoomStatePayload(
+            room_id=room.room_id,
+            state=room.state.name.lower(),
+            players=players,
+            host_player_id=host_player_id,
+            can_start=can_start,
+            player_count=room.player_count,
+            max_players=MAX_PLAYERS_PER_ROOM,
+        ).to_dict()
+
+    async def broadcast_room_state(self, room: Room) -> None:
+        """Send the current room state to every player in the room."""
+        for pid in list(room.player_ids):
+            state = self.build_room_state(room)
+            state["local_player_id"] = pid
+            await self._send_callback(pid, state)
 
     # ----- Lookups -----
 
@@ -94,11 +129,16 @@ class RoomManager:
             return
 
         room.remove_player(player_id)
+        session = self._sessions.get(player_id)
+        if session:
+            session.room_id = None
         logger.info("Removed player %d from room %s", player_id, room_id)
 
         # If room is empty or has too few players during game, destroy it
         if room.player_count == 0:
             await self._destroy_room(room_id)
+        else:
+            await self.broadcast_room_state(room)
 
     # ----- Cleanup -----
 
@@ -109,6 +149,9 @@ class RoomManager:
         if room:
             for pid in list(room.player_ids):
                 self._player_room.pop(pid, None)
+                session = self._sessions.get(pid)
+                if session:
+                    session.room_id = None
 
         # Schedule cleanup after a short delay so clients can receive final messages
         await self._destroy_room(room_id)
@@ -120,6 +163,9 @@ class RoomManager:
             # Clean up player mappings
             for pid in list(room.player_ids):
                 self._player_room.pop(pid, None)
+                session = self._sessions.get(pid)
+                if session:
+                    session.room_id = None
             await room.destroy()
 
     async def shutdown(self) -> None:

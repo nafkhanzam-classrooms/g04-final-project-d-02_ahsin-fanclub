@@ -23,6 +23,9 @@ class ClientMessageType(str, Enum):
     LEAVE_QUEUE = "cancel_queue"   # client sends "cancel_queue"
     INPUT = "input"
     PING = "ping"
+    CREATE_ROOM = "create_room"
+    START_ROOM = "start_room"
+    LEAVE_ROOM = "leave_room"
 
 
 # =============================================================================
@@ -34,6 +37,7 @@ class ServerMessageType(str, Enum):
     QUEUE_STATUS = "queue_status"
     MATCH_FOUND = "match_found"
     MATCH_START = "match_start"
+    ROOM_STATE = "room_state"
     SNAPSHOT = "snapshot"
     PLAYER_ELIMINATED = "player_eliminated"
     MATCH_END = "match_end"
@@ -77,6 +81,43 @@ class MatchStartPayload:
         return {
             "type": ServerMessageType.MATCH_START.value,
             "room_id": self.room_id,
+        }
+
+
+@dataclass
+class RoomPlayer:
+    player_id: int
+    name: str
+    is_host: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "player_id": self.player_id,
+            "name": self.name,
+            "is_host": self.is_host,
+        }
+
+
+@dataclass
+class RoomStatePayload:
+    room_id: str
+    state: str
+    players: list[RoomPlayer] = field(default_factory=list)
+    host_player_id: int = -1
+    can_start: bool = False
+    player_count: int = 0
+    max_players: int = 0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "type": ServerMessageType.ROOM_STATE.value,
+            "room_id": self.room_id,
+            "state": self.state,
+            "players": [player.to_dict() for player in self.players],
+            "host_player_id": self.host_player_id,
+            "can_start": self.can_start,
+            "player_count": self.player_count,
+            "max_players": self.max_players,
         }
 
 

@@ -16,6 +16,7 @@ import pygame
 
 from game.scene_manager import Scene
 from game.ui.widgets import Button, Label, TextBox
+from game.scenes.join_room_modal import JoinRoomModal
 
 if TYPE_CHECKING:
     from game.game_app import GameApp
@@ -41,6 +42,11 @@ class MenuScene(Scene):
 
         self._start_time: float = time.monotonic()
         self._error_timer: float = 0.0
+
+        self._join_modal = JoinRoomModal(
+            screen_size = app.screen_size,
+            # on_join = self._join_room_code
+        )
 
         self._title = Label(
             "SNAKE.IO",
@@ -151,11 +157,15 @@ class MenuScene(Scene):
         self._join_room_btn.handle_event(event)
         self._play_btn.handle_event(event)
         self._quit_btn.handle_event(event)
+        if self._join_modal.visible:
+            self._join_modal.handle_event(event)
 
     # ----- Update -----
 
     def update(self, dt: float) -> None:
         sw, sh = self.app.screen_size
+
+        self._join_modal.update(dt)
 
         if self._error_timer > 0:
             self._error_timer -= dt
@@ -200,6 +210,7 @@ class MenuScene(Scene):
         self._join_room_btn.render(screen)
         self._play_btn.render(screen)
         self._quit_btn.render(screen)
+        self._join_modal.render(screen)
 
         if self._error_label.text:
             self._error_label.render(screen)
@@ -224,16 +235,6 @@ class MenuScene(Scene):
         self.app.username = username
         self.app.scene_manager.switch("matchmaking")
 
-    def _on_join_room(self) -> None:
-        """Switch to join room scene."""
-        username = self._get_username()
-        if not username:
-            self._show_error("Username cannot be empty.")
-            return
-
-        self.app.username = username
-        self.app.scene_manager.switch("join_room")
-
     def _on_create_room(self) -> None:
         """Switch to create room scene."""
         username = self._get_username()
@@ -242,7 +243,7 @@ class MenuScene(Scene):
             return
 
         self.app.username = username
-        self.app.scene_manager.switch("create_room")
+        self.app.scene_manager.switch("lobby")
 
     def _on_quit(self) -> None:
         """Quit the game."""
@@ -252,3 +253,13 @@ class MenuScene(Scene):
         """Display an error message temporarily."""
         self._error_label.text = message
         self._error_timer = duration
+
+    def _on_join_room(self) -> None:
+        username = self._get_username()
+
+        if not username:
+            self._show_error("Username cannot be empty.")
+            return
+
+        self.app.username = username
+        self._join_modal.open()

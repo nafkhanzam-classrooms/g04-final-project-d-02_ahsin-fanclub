@@ -25,7 +25,7 @@ from game.scenes.matchmaking_scene import MatchmakingScene
 from game.scenes.loading_scene import LoadingScene
 from game.scenes.gameplay_scene import GameplayScene
 from game.scenes.results_scene import ResultsScene
-from game.scenes.create_room_scene import CreateRoomScene
+from game.scenes.lobby_scene import LobbyScene
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ class GameApp:
         self._scene_manager.register("loading", LoadingScene)
         self._scene_manager.register("gameplay", GameplayScene)
         self._scene_manager.register("results", ResultsScene)
-        self._scene_manager.register("create_room", CreateRoomScene)
+        self._scene_manager.register("lobby", LobbyScene)
 
         # Shared state between scenes
         self.match_data: dict[str, Any] = {}

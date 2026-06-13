@@ -21,6 +21,7 @@ from server.networking.message_router import MessageRouter
 from server.networking.packet_decoder import DecodeError, decode
 from server.networking.rate_limiter import RateLimiter
 from server.rooms.player_session import PlayerSession, PlayerState
+from server.rooms.room import RoomState
 from server.rooms.room_manager import RoomManager
 from server.shared.constants import (
     MAX_MESSAGE_SIZE,
@@ -59,7 +60,7 @@ class WebSocketServer:
         self._sessions: dict[int, PlayerSession] = {}
 
         # Room & matchmaking (use send callback)
-        self._room_manager: RoomManager = RoomManager(self._send_to_player)
+        self._room_manager: RoomManager = RoomManager(self._send_to_player, self._sessions)
         self._matchmaking: MatchmakingService = MatchmakingService(
             self._room_manager,
             self._sessions,
@@ -177,6 +178,9 @@ class WebSocketServer:
         """Register all message type handlers with the router."""
         self._router.register("join_queue", self._handle_join_queue)
         self._router.register("cancel_queue", self._handle_cancel_queue)
+        self._router.register("create_room", self._handle_create_room)
+        self._router.register("start_room", self._handle_start_room)
+        self._router.register("leave_room", self._handle_leave_room)
         self._router.register("input", self._handle_input)
         self._router.register("ping", self._handle_ping)
 
@@ -198,6 +202,48 @@ class WebSocketServer:
     async def _handle_cancel_queue(self, player_id: int, message: dict[str, Any]) -> None:
         """Handle a player cancelling their matchmaking request."""
         await self._matchmaking.remove_player(player_id)
+
+    async def _handle_create_room(self, player_id: int, message: dict[str, Any]) -> None:
+        """Create a private room for the requesting player."""
+        session = self._sessions.get(player_id)
+        if session is None:
+            return
+
+        if session.room_id:
+            await self._send_error(player_id, "You are already in a room.")
+            return
+
+        username = message.get("username", "").strip()
+        if username:
+            session.name = username[:16]
+
+        room = self._room_manager.create_room([player_id], self._sessions)
+        await self._room_manager.broadcast_room_state(room)
+
+    async def _handle_start_room(self, player_id: int, message: dict[str, Any]) -> None:
+        """Start a waiting room created by the host."""
+        room = self._room_manager.get_player_room(player_id)
+        if room is None:
+            await self._send_error(player_id, "You are not in a room.")
+            return
+
+        if not room.player_ids or room.player_ids[0] != player_id:
+            await self._send_error(player_id, "Only the host can start the room.")
+            return
+
+        if room.state.name.lower() != "waiting":
+            await self._send_error(player_id, "Room is already starting or running.")
+            return
+
+        room.state = RoomState.STARTING
+        await self._room_manager.broadcast_room_state(room)
+        await room.start_countdown()
+
+    async def _handle_leave_room(self, player_id: int, message: dict[str, Any]) -> None:
+        """Remove the player from their current room."""
+        await self._room_manager.remove_player_from_room(player_id)
+        self._sessions[player_id].room_id = None
+        self._sessions[player_id].state = PlayerState.CONNECTED
 
     async def _handle_input(self, player_id: int, message: dict[str, Any]) -> None:
         """Handle a player input (direction change)."""
