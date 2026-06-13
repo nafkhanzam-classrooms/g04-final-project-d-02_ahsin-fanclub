@@ -121,7 +121,7 @@ class MatchmakingScene(Scene):
                 return
 
         # TODO: SERVER INTEGRATION — Send join_queue message
-        await client.send(make_join_queue_message())
+        await client.send(make_join_queue_message(self.app.username))
 
     # ----- Event handlers -----
 

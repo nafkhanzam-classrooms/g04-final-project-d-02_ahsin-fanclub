@@ -182,6 +182,17 @@ class WebSocketServer:
 
     async def _handle_join_queue(self, player_id: int, message: dict[str, Any]) -> None:
         """Handle a player requesting to join the matchmaking queue."""
+        username = message.get("username", "").strip()
+
+        if not username:
+            await self._send_error(player_id, "Username cannot be empty.")
+            return
+
+        if len(username) > 16:
+            await self._send_error(player_id, "Username too long.")
+            return
+        self._sessions[player_id].name = username
+        
         await self._matchmaking.add_player(player_id)
 
     async def _handle_cancel_queue(self, player_id: int, message: dict[str, Any]) -> None:

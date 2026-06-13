@@ -65,10 +65,11 @@ def make_input_message(direction: float) -> bytes:
     })
 
 
-def make_join_queue_message() -> bytes:
+def make_join_queue_message(username: str) -> bytes:
     """Create an encoded join-queue request."""
     return encode_message({
         "type": ClientMessageType.JOIN_QUEUE.value,
+        "username": username
     })
 
 

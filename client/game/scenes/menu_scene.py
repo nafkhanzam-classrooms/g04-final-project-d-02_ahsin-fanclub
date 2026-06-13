@@ -77,7 +77,7 @@ class MenuScene(Scene):
             y=sh // 2 + 20,
             width=btn_w,
             height=btn_h,
-            text="PLAY",
+            text="QUICKPLAY",
             on_click=self._on_play,
             font_size=26,
         )
@@ -175,7 +175,6 @@ class MenuScene(Scene):
 
     def _on_play(self) -> None:
         """Switch to matchmaking scene."""
-        self.app.scene_manager.switch("matchmaking")
         username = self._username_box.get_text().strip()
 
         if not username:
