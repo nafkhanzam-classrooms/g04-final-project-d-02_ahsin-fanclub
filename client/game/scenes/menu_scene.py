@@ -1,13 +1,14 @@
 """
 Menu Scene — Main menu with Play and Quit buttons.
 
-The first screen the player sees.  Features a title, animated
-background, and two primary action buttons.
+The first screen the player sees. Features a title, animated
+background, and primary action buttons.
 """
 
 from __future__ import annotations
 
 import math
+import random
 import time
 from typing import TYPE_CHECKING
 
@@ -38,9 +39,13 @@ class MenuScene(Scene):
         super().__init__(app)
         sw, sh = app.screen_size
 
+        self._start_time: float = time.monotonic()
+        self._error_timer: float = 0.0
+
         self._title = Label(
             "SNAKE.IO",
-            x=sw // 2, y=sh // 4,
+            x=sw // 2,
+            y=sh // 4,
             color=COLOR_TITLE,
             font_size=64,
             centered=True,
@@ -49,15 +54,8 @@ class MenuScene(Scene):
 
         self._subtitle = Label(
             "Multiplayer Arena",
-            x=sw // 2, y=sh // 4 + 60,
-            color=COLOR_SUBTITLE,
-            font_size=22,
-            centered=True,
-        )
-
-        self._subtitle = Label(
-            "Enter username",
-            x=sw // 2, y=sh // 4 + 60,
+            x=sw // 2,
+            y=sh // 4 + 60,
             color=COLOR_SUBTITLE,
             font_size=22,
             centered=True,
@@ -71,9 +69,18 @@ class MenuScene(Scene):
             placeholder="Enter username",
         )
 
+        self._error_label = Label(
+            "",
+            x=sw // 2,
+            y=self._username_box.rect.bottom + 25,
+            color=(255, 100, 100),
+            font_size=18,
+            centered=True,
+        )
+
         btn_w, btn_h = 240, 55
 
-        self._play_btn = Button(
+        self._create_room_btn = Button(
             x=sw // 2 - btn_w // 2,
             y=sh // 2 + 20,
             width=btn_w,
@@ -83,9 +90,9 @@ class MenuScene(Scene):
             font_size=26,
         )
 
-        self._play_btn = Button(
+        self._join_room_btn = Button(
             x=sw // 2 - btn_w // 2,
-            y=sh // 2 + 20,
+            y=sh // 2 + 100,
             width=btn_w,
             height=btn_h,
             text="JOIN ROOM",
@@ -95,7 +102,7 @@ class MenuScene(Scene):
 
         self._play_btn = Button(
             x=sw // 2 - btn_w // 2,
-            y=sh // 2 + 20,
+            y=sh // 2 + 180,
             width=btn_w,
             height=btn_h,
             text="QUICKPLAY",
@@ -105,7 +112,7 @@ class MenuScene(Scene):
 
         self._quit_btn = Button(
             x=sw // 2 - btn_w // 2,
-            y=sh // 2 + 100,
+            y=sh // 2 + 260,
             width=btn_w,
             height=btn_h,
             text="QUIT",
@@ -113,19 +120,18 @@ class MenuScene(Scene):
             font_size=26,
         )
 
-        self._start_time: float = time.monotonic()
-
         # Decorative floating particles
         self._particles: list[dict] = []
-        import random
         for _ in range(40):
-            self._particles.append({
-                "x": random.uniform(0, sw),
-                "y": random.uniform(0, sh),
-                "speed": random.uniform(10, 40),
-                "size": random.randint(1, 3),
-                "phase": random.uniform(0, math.tau),
-            })
+            self._particles.append(
+                {
+                    "x": random.uniform(0, sw),
+                    "y": random.uniform(0, sh),
+                    "speed": random.uniform(10, 40),
+                    "size": random.randint(1, 3),
+                    "phase": random.uniform(0, math.tau),
+                }
+            )
 
     # ----- Scene lifecycle -----
 
@@ -140,19 +146,27 @@ class MenuScene(Scene):
     # ----- Event handling -----
 
     def handle_event(self, event: pygame.event.Event) -> None:
+        self._username_box.handle_event(event)
+        self._create_room_btn.handle_event(event)
+        self._join_room_btn.handle_event(event)
         self._play_btn.handle_event(event)
         self._quit_btn.handle_event(event)
-        self._username_box.handle_event(event)
 
     # ----- Update -----
 
     def update(self, dt: float) -> None:
         sw, sh = self.app.screen_size
+
+        if self._error_timer > 0:
+            self._error_timer -= dt
+            if self._error_timer <= 0:
+                self._error_timer = 0
+                self._error_label.text = ""
+
         for p in self._particles:
             p["y"] -= p["speed"] * dt
             if p["y"] < -10:
                 p["y"] = sh + 10
-                import random
                 p["x"] = random.uniform(0, sw)
 
     # ----- Render -----
@@ -177,15 +191,18 @@ class MenuScene(Scene):
                 int(COLOR_PARTICLE[1] * alpha),
                 int(COLOR_PARTICLE[2] * alpha),
             )
-            pygame.draw.circle(
-                screen, c, (int(p["x"]), int(p["y"])), p["size"]
-            )
+            pygame.draw.circle(screen, c, (int(p["x"]), int(p["y"])), p["size"])
 
         self._title.render(screen)
         self._subtitle.render(screen)
+        self._username_box.render(screen)
+        self._create_room_btn.render(screen)
+        self._join_room_btn.render(screen)
         self._play_btn.render(screen)
         self._quit_btn.render(screen)
-        self._username_box.render(screen)
+
+        if self._error_label.text:
+            self._error_label.render(screen)
 
         # Version text
         font_tiny = pygame.font.SysFont("Arial", 12)
@@ -194,21 +211,34 @@ class MenuScene(Scene):
 
     # ----- Callbacks -----
 
+    def _get_username(self) -> str:
+        return self._username_box.get_text().strip()
+
     def _on_play(self) -> None:
         """Switch to matchmaking scene."""
-        username = self._username_box.get_text().strip()
-
+        username = self._get_username()
         if not username:
+            self._show_error("Username cannot be empty.")
             return
 
         self.app.username = username
         self.app.scene_manager.switch("matchmaking")
 
-    def _on_create_room(self) -> None:
-        """Switch to creating room scene."""
-        username = self._username_box.get_text().strip()
-
+    def _on_join_room(self) -> None:
+        """Switch to join room scene."""
+        username = self._get_username()
         if not username:
+            self._show_error("Username cannot be empty.")
+            return
+
+        self.app.username = username
+        self.app.scene_manager.switch("join_room")
+
+    def _on_create_room(self) -> None:
+        """Switch to create room scene."""
+        username = self._get_username()
+        if not username:
+            self._show_error("Username cannot be empty.")
             return
 
         self.app.username = username
@@ -217,3 +247,8 @@ class MenuScene(Scene):
     def _on_quit(self) -> None:
         """Quit the game."""
         pygame.event.post(pygame.event.Event(pygame.QUIT))
+
+    def _show_error(self, message: str, duration: float = 3.0) -> None:
+        """Display an error message temporarily."""
+        self._error_label.text = message
+        self._error_timer = duration
