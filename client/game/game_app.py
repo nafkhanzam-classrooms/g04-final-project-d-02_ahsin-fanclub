@@ -74,7 +74,6 @@ class GameApp:
         # Shared state between scenes
         self.match_data: dict[str, Any] = {}
         self.match_results: dict[str, Any] = {}
-
         self._running: bool = False
 
     # ----- Properties -----

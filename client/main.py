@@ -8,7 +8,6 @@ import asyncio
 import sys
 
 import pygame
-
 from game.game_app import GameApp
 
 

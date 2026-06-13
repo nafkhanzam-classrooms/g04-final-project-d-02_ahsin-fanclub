@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 import pygame
 
 from game.scene_manager import Scene
-from game.ui.widgets import Button, Label
+from game.ui.widgets import Button, Label, TextBox
 
 if TYPE_CHECKING:
     from game.game_app import GameApp
@@ -55,8 +55,23 @@ class MenuScene(Scene):
             centered=True,
         )
 
-        btn_w, btn_h = 240, 55
+        self._subtitle = Label(
+            "Enter username",
+            x=sw // 2, y=sh // 4 + 60,
+            color=COLOR_SUBTITLE,
+            font_size=22,
+            centered=True,
+        )
 
+        self._username_box = TextBox(
+            x=sw // 2 - 150,
+            y=sh // 2 - 60,
+            width=300,
+            height=50,
+            placeholder="Enter username",
+        )
+
+        btn_w, btn_h = 240, 55
         self._play_btn = Button(
             x=sw // 2 - btn_w // 2,
             y=sh // 2 + 20,
@@ -106,6 +121,7 @@ class MenuScene(Scene):
     def handle_event(self, event: pygame.event.Event) -> None:
         self._play_btn.handle_event(event)
         self._quit_btn.handle_event(event)
+        self._username_box.handle_event(event)
 
     # ----- Update -----
 
@@ -148,6 +164,7 @@ class MenuScene(Scene):
         self._subtitle.render(screen)
         self._play_btn.render(screen)
         self._quit_btn.render(screen)
+        self._username_box.render(screen)
 
         # Version text
         font_tiny = pygame.font.SysFont("Arial", 12)
@@ -158,6 +175,13 @@ class MenuScene(Scene):
 
     def _on_play(self) -> None:
         """Switch to matchmaking scene."""
+        self.app.scene_manager.switch("matchmaking")
+        username = self._username_box.get_text().strip()
+
+        if not username:
+            return
+
+        self.app.username = username
         self.app.scene_manager.switch("matchmaking")
 
     def _on_quit(self) -> None:
