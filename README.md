@@ -599,3 +599,9 @@ Proyek ini berhasil mengimplementasikan game multiplayer real-time lengkap denga
 ---
 
 *Proyek ini dikembangkan sebagai Final Project mata kuliah Pemrograman Jaringan.*
+
+## 9. Link Video 
+
+Hasil gameplay dari permainan yang disusun dapat dilihat pada link berikut:
+
+https://youtu.be/Vsa34fKyxrg
