@@ -7,6 +7,19 @@
 Implementasi game multiplayer Snake.io berbasis WebSocket dengan arsitektur client-server yang menggunakan simulasi fisika di sisi server (server-authoritative) dan interpolasi posisi di sisi client.
 
 ---
+## Anggota
+
+| Name | NRP | Kelas |
+| --- | --- | --- |
+| Zulkarnaen Ramdhani | 5025241043 | Pemrograman Jaringan - D |
+| Ahsin Khuluqil Karim | 5025241063 | Pemrograman Jaringan - D |
+| Riyan Fadli Amazzadin | 5025241068 | Pemrograman Jaringan - D |
+
+## Link Video Demo
+
+Hasil gameplay dari permainan yang disusun dapat dilihat pada link berikut:
+
+https://youtu.be/Vsa34fKyxrg
 
 ## Daftar Isi
 
@@ -597,11 +610,3 @@ Proyek ini berhasil mengimplementasikan game multiplayer real-time lengkap denga
 | Observabilitas   | Metrics server (jumlah room aktif, rata-rata pemain, dll.) via Prometheus   |
 
 ---
-
-*Proyek ini dikembangkan sebagai Final Project mata kuliah Pemrograman Jaringan.*
-
-## 9. Link Video 
-
-Hasil gameplay dari permainan yang disusun dapat dilihat pada link berikut:
-
-https://youtu.be/Vsa34fKyxrg
