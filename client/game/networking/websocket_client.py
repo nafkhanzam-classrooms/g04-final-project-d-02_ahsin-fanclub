@@ -24,7 +24,6 @@ from game.networking.protocol import (
 
 logger = logging.getLogger(__name__)
 
-# TODO: SERVER INTEGRATION — Update with actual server address
 DEFAULT_SERVER_URI = "ws://localhost:8765"
 
 
@@ -50,13 +49,10 @@ class WebSocketClient:
         self._recv_task: asyncio.Task[None] | None = None
         self._connected: bool = False
         self._ping_ms: float = 0.0
-        # _ping_send_time records when we sent the last PING, so that
-        # when the PONG arrives we can compute true round-trip latency.
         self._ping_send_time: float = 0.0
         self._ping_task: asyncio.Task[None] | None = None
         self._server_uri: str = DEFAULT_SERVER_URI
 
-    # ----- Properties -----
 
     @property
     def connected(self) -> bool:
@@ -68,7 +64,6 @@ class WebSocketClient:
         """Latest measured round-trip latency in milliseconds."""
         return self._ping_ms
 
-    # ----- Connection lifecycle -----
 
     async def connect(self, uri: str | None = None) -> bool:
         """
@@ -97,7 +92,7 @@ class WebSocketClient:
 
             self._ws = await websockets.connect(
                 self._server_uri,
-                max_size=2**20,  # 1 MiB
+                max_size=2**20,
                 close_timeout=5,
             )
             self._connected = True
@@ -134,7 +129,6 @@ class WebSocketClient:
         self._ws = None
         logger.info("Disconnected from server")
 
-    # ----- Sending -----
 
     async def send(self, data: bytes) -> None:
         """Send raw bytes (msgpack-encoded) to the server."""
@@ -151,7 +145,6 @@ class WebSocketClient:
         """Convenience: encode a dict to msgpack and send."""
         await self.send(encode_message(payload))
 
-    # ----- Receive loop -----
 
     async def _recv_loop(self) -> None:
         """
@@ -165,7 +158,6 @@ class WebSocketClient:
                 if isinstance(raw, bytes):
                     message = decode_message(raw)
                 elif isinstance(raw, str):
-                    # Fallback — server might send JSON text during dev
                     import json
                     message = json.loads(raw)
                 else:
@@ -176,7 +168,7 @@ class WebSocketClient:
                 if msg_type == "pong" and self._ping_send_time > 0:
                     self._ping_ms = (time.monotonic() - self._ping_send_time) * 1000.0
                     self._ping_send_time = 0.0
-                    continue  # Don't dispatch pong to game scenes
+                    continue
 
                 self._dispatcher.dispatch(msg_type, message)
 

@@ -64,16 +64,13 @@ class MatchmakingService:
             return
 
         if not self._queue.enqueue(player_id):
-            # Already in queue
             return
 
         session.state = PlayerState.IN_QUEUE
         logger.info("Player %d added to matchmaking queue", player_id)
 
-        # Notify all queued players about the new queue size
         await self._broadcast_queue_status()
 
-        # Check if we can create a room
         await self._try_create_room()
 
     async def remove_player(self, player_id: int) -> None:
@@ -92,22 +89,17 @@ class MatchmakingService:
             player_ids = self._queue.dequeue(room_size)
 
             if len(player_ids) < 2:
-                # Not enough players after dequeue (e.g., disconnected)
-                # Re-queue them
                 for pid in player_ids:
                     self._queue.enqueue(pid)
                 break
 
-            # Update player sessions
             for pid in player_ids:
                 session = self._sessions.get(pid)
                 if session:
                     session.state = PlayerState.IN_ROOM
 
-            # Create the room
             room = self._room_manager.create_room(player_ids)
 
-            # Start the countdown in a background task
             asyncio.create_task(room.start_countdown())
 
             logger.info(
@@ -117,7 +109,6 @@ class MatchmakingService:
                 player_ids,
             )
 
-        # Notify remaining queued players
         await self._broadcast_queue_status()
 
     async def _broadcast_queue_status(self) -> None:
@@ -126,7 +117,6 @@ class MatchmakingService:
             players_waiting=self._queue.size,
         ).to_dict()
 
-        # We need to iterate the internal queue set for current members
         for pid in list(self._sessions.keys()):
             session = self._sessions.get(pid)
             if session and session.state == PlayerState.IN_QUEUE:

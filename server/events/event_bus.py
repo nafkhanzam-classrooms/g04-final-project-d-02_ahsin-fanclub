@@ -15,7 +15,6 @@ from typing import Any, Callable, Coroutine
 
 logger = logging.getLogger(__name__)
 
-# Type alias for async event handlers
 EventHandler = Callable[[Any], Coroutine[Any, Any, None]]
 
 

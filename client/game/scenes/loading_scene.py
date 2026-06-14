@@ -58,14 +58,12 @@ class LoadingScene(Scene):
         self._start_time: float = time.monotonic()
         self._player_count: int = 0
 
-    # ----- Lifecycle -----
 
     def enter(self) -> None:
         """Subscribe to MATCH_START and extract match data."""
         self.app.event_dispatcher.subscribe("match_start", self._on_match_start)
         self.app.event_dispatcher.subscribe("error", self._on_error)
 
-        # Extract player count from match_found data
         match_data = getattr(self.app, "match_data", {})
         self._player_count = match_data.get("player_count", 0)
         self._player_count_label.text = f"Players: {self._player_count}"
@@ -74,15 +72,11 @@ class LoadingScene(Scene):
         self.app.event_dispatcher.unsubscribe("match_start", self._on_match_start)
         self.app.event_dispatcher.unsubscribe("error", self._on_error)
 
-    # ----- Events -----
 
     def handle_event(self, event: pygame.event.Event) -> None:
-        pass  # No interactive elements
+        pass
 
     def update(self, dt: float) -> None:
-        # MATCH_START_COUNTDOWN of 3.0 seconds. Previously used dt * 0.5
-        # which filled in ~2s (visual mismatch with 3.0s countdown).
-        # 1.0 / 3.0 ≈ 0.333 fills the bar in exactly 3.0 seconds.
         self._progress = min(1.0, self._progress + dt * (1.0 / 3.0))
 
     def render(self, screen: pygame.Surface) -> None:
@@ -93,23 +87,19 @@ class LoadingScene(Scene):
         self._player_count_label.render(screen)
         self._loading_label.render(screen)
 
-        # Progress bar
         bar_w = 300
         bar_h = 12
         bar_x = sw // 2 - bar_w // 2
         bar_y = sh // 2 + 20
 
-        # Background
         pygame.draw.rect(
             screen, (30, 30, 50),
             (bar_x, bar_y, bar_w, bar_h),
             border_radius=6,
         )
 
-        # Fill
         fill_w = int(bar_w * self._progress)
         if fill_w > 0:
-            # Gradient-ish fill
             fill_color = (
                 int(60 + 140 * self._progress),
                 int(180 + 60 * self._progress),
@@ -121,14 +111,12 @@ class LoadingScene(Scene):
                 border_radius=6,
             )
 
-        # Border
         pygame.draw.rect(
             screen, (80, 90, 120),
             (bar_x, bar_y, bar_w, bar_h),
             1, border_radius=6,
         )
 
-        # Spinning icon
         elapsed = time.monotonic() - self._start_time
         cx, cy = sw // 2, sh // 2 + 120
         for i in range(8):
@@ -140,11 +128,9 @@ class LoadingScene(Scene):
             c = (int(100 * alpha), int(150 * alpha), int(255 * alpha))
             pygame.draw.circle(screen, c, (int(dx), int(dy)), 3)
 
-    # ----- Server events -----
 
     def _on_match_start(self, data: dict[str, Any]) -> None:
         """Server signals match start — switch to gameplay."""
-        # TODO: SERVER INTEGRATION — Extract any initial state from data
         self.app.scene_manager.switch("gameplay")
 
     def _on_error(self, data: dict[str, Any]) -> None:

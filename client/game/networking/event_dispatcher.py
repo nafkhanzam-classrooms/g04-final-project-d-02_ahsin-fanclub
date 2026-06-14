@@ -10,7 +10,6 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any, Callable
 
-# Type alias for event handler callbacks
 EventHandler = Callable[[dict[str, Any]], None]
 
 
@@ -44,7 +43,7 @@ class EventDispatcher:
         try:
             self._listeners[event_type].remove(handler)
         except ValueError:
-            pass  # Handler was not registered — silently ignore
+            pass
 
     def dispatch(self, event_type: str, data: dict[str, Any] | None = None) -> None:
         """Invoke all handlers registered for *event_type* with *data*."""

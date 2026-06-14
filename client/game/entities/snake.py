@@ -86,11 +86,10 @@ class SnakeData:
         if self.segments:
             return
 
-        segment_spacing = 8.0  # pixels between segments
+        segment_spacing = 8.0
         self.segments = [SnakeSegment(self.x, self.y)]
 
-        # Generate trailing segments behind the head
-        angle_rad = math.radians(self.direction + 180)  # Opposite of heading
+        angle_rad = math.radians(self.direction + 180)
         for i in range(1, self.length):
             prev = self.segments[i - 1]
             sx = prev.x + math.cos(angle_rad) * segment_spacing

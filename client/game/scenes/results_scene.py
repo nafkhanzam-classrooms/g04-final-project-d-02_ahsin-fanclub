@@ -19,9 +19,6 @@ if TYPE_CHECKING:
     from game.game_app import GameApp
 
 
-# ---------------------------------------------------------------------------
-# Colors
-# ---------------------------------------------------------------------------
 
 COLOR_BG = (10, 10, 24)
 COLOR_GOLD = (255, 215, 0)
@@ -66,12 +63,10 @@ class ResultsScene(Scene):
         self._header_font: pygame.font.Font = pygame.font.SysFont("Arial", 18, bold=True)
         self._row_font: pygame.font.Font = pygame.font.SysFont("Arial", 20)
 
-        # Match data (populated in enter())
         self._winner_name: str = ""
         self._rankings: list[dict[str, Any]] = []
         self._local_player_id: int = -1
 
-    # ----- Lifecycle -----
 
     def enter(self) -> None:
         """Extract match results data."""
@@ -81,9 +76,7 @@ class ResultsScene(Scene):
         self._rankings = results.get("rankings", [])
         self._local_player_id = results.get("local_player_id", -1)
 
-        # If no rankings provided, try to build from available data
         if not self._rankings:
-            # Fallback: create dummy entries
             self._rankings = [
                 {"name": self._winner_name, "score": 0, "id": -1}
             ]
@@ -91,15 +84,13 @@ class ResultsScene(Scene):
     def exit(self) -> None:
         pass
 
-    # ----- Events -----
 
     def handle_event(self, event: pygame.event.Event) -> None:
         self._menu_btn.handle_event(event)
 
     def update(self, dt: float) -> None:
-        pass  # Static screen
+        pass
 
-    # ----- Render -----
 
     def render(self, screen: pygame.Surface) -> None:
         screen.fill(COLOR_BG)
@@ -107,7 +98,6 @@ class ResultsScene(Scene):
 
         self._title.render(screen)
 
-        # Winner announcement
         winner_surf = self._winner_font.render(
             f"🏆  Winner: {self._winner_name}", True, COLOR_WINNER
         )
@@ -116,7 +106,6 @@ class ResultsScene(Scene):
             (sw // 2 - winner_surf.get_width() // 2, 130),
         )
 
-        # Rankings table
         self._render_rankings(screen, sw, sh)
 
         self._menu_btn.render(screen)
@@ -134,13 +123,11 @@ class ResultsScene(Scene):
         col_name_x = sw // 2 - 120
         col_score_x = sw // 2 + 120
 
-        # Header
         header_color = (120, 130, 160)
         for text, x in [("RANK", col_rank_x), ("PLAYER", col_name_x), ("SCORE", col_score_x)]:
             surf = header_font.render(text, True, header_color)
             screen.blit(surf, (x, table_top))
 
-        # Separator line
         pygame.draw.line(
             screen, (40, 45, 70),
             (col_rank_x, table_top + 28),
@@ -148,7 +135,6 @@ class ResultsScene(Scene):
             1,
         )
 
-        # Rows
         for i, entry in enumerate(self._rankings):
             y = table_top + 40 + i * row_height
             rank = i + 1
@@ -156,13 +142,11 @@ class ResultsScene(Scene):
             score = entry.get("score", 0)
             player_id = entry.get("id", -1)
 
-            # Color based on rank
             if rank <= 3:
                 color = RANK_COLORS[rank - 1]
             else:
                 color = COLOR_TEXT
 
-            # Highlight local player
             if player_id == self._local_player_id:
                 highlight = pygame.Surface((420, row_height - 5), pygame.SRCALPHA)
                 highlight.fill((50, 60, 100, 60))
@@ -178,7 +162,6 @@ class ResultsScene(Scene):
             score_surf = row_font.render(str(score), True, color)
             screen.blit(score_surf, (col_score_x, y))
 
-    # ----- Callbacks -----
 
     def _on_return_menu(self) -> None:
         """Return to the main menu and disconnect."""

@@ -13,14 +13,11 @@ from enum import Enum
 from typing import Any
 
 
-# =============================================================================
-# Client → Server message types
-# =============================================================================
 
 class ClientMessageType(str, Enum):
     """Messages the client may send."""
     JOIN_QUEUE = "join_queue"
-    LEAVE_QUEUE = "cancel_queue"   # client sends "cancel_queue"
+    LEAVE_QUEUE = "cancel_queue"
     INPUT = "input"
     PING = "ping"
     CREATE_ROOM = "create_room"
@@ -29,9 +26,6 @@ class ClientMessageType(str, Enum):
     LEAVE_ROOM = "leave_room"
 
 
-# =============================================================================
-# Server → Client message types
-# =============================================================================
 
 class ServerMessageType(str, Enum):
     """Messages the server may send."""
@@ -46,9 +40,6 @@ class ServerMessageType(str, Enum):
     ERROR = "error"
 
 
-# =============================================================================
-# Server → Client payloads
-# =============================================================================
 
 @dataclass
 class QueueStatusPayload:

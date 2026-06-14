@@ -37,20 +37,15 @@ class WinConditionSystem:
 
         alive = [s for s in snakes if s.alive]
 
-        # Condition A: only one snake remains
         if len(alive) <= 1 and len(snakes) > 1:
             if len(alive) == 1:
                 winner = alive[0]
             else:
-                # All dead — pick the one with the highest score.
-                # snakes is guaranteed non-empty by the guard above.
                 winner = max(snakes, key=lambda s: s.score)
 
             return self._build_result(winner, snakes)
 
-        # Condition B: timer expired
         if self._timer.expired:
-            # when the timer expires (all players disconnected simultaneously).
             if alive:
                 winner = max(alive, key=lambda s: s.score)
             else:
@@ -62,7 +57,6 @@ class WinConditionSystem:
     @staticmethod
     def _build_result(winner: Snake, snakes: list[Snake]) -> dict[str, Any]:
         """Build the match result payload."""
-        # Sort by score descending for rankings
         sorted_snakes = sorted(snakes, key=lambda s: s.score, reverse=True)
         rankings = [
             {

@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from server.shared.schemas import ClientMessageType, ServerMessageType
 
-# Valid client message types for quick validation
 VALID_CLIENT_TYPES: frozenset[str] = frozenset(t.value for t in ClientMessageType)
 
 __all__ = [

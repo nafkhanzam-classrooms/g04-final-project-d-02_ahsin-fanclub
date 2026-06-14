@@ -67,17 +67,14 @@ class MatchmakingScene(Scene):
         self._players_in_queue: int = 0
         self._start_time: float = time.monotonic()
 
-    # ----- Scene lifecycle -----
 
     def enter(self) -> None:
         """Connect to server and request matchmaking."""
-        # Subscribe to server events
         dispatcher = self.app.event_dispatcher
         dispatcher.subscribe("match_found", self._on_match_found)
         dispatcher.subscribe("queue_status", self._on_queue_status)
         dispatcher.subscribe("error", self._on_error)
 
-        # TODO: SERVER INTEGRATION — Connect to server and send join_queue
         asyncio.ensure_future(self._connect_and_queue())
 
     def exit(self) -> None:
@@ -87,7 +84,6 @@ class MatchmakingScene(Scene):
         dispatcher.unsubscribe("queue_status", self._on_queue_status)
         dispatcher.unsubscribe("error", self._on_error)
 
-    # ----- Event handling -----
 
     def handle_event(self, event: pygame.event.Event) -> None:
         self._cancel_btn.handle_event(event)
@@ -109,7 +105,6 @@ class MatchmakingScene(Scene):
         self._status_label.render(screen)
         self._cancel_btn.render(screen)
 
-    # ----- Network -----
 
     async def _connect_and_queue(self) -> None:
         """Connect to the WebSocket server and join the matchmaking queue."""
@@ -120,10 +115,8 @@ class MatchmakingScene(Scene):
                 self._status_label.text = "Connection failed — retrying..."
                 return
 
-        # TODO: SERVER INTEGRATION — Send join_queue message
         await client.send(make_join_queue_message(self.app.username))
 
-    # ----- Event handlers -----
 
     def _on_match_found(self, data: dict[str, Any]) -> None:
         """Server found a match — transition to loading scene."""

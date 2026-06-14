@@ -15,11 +15,8 @@ from __future__ import annotations
 import pygame
 
 
-# ---------------------------------------------------------------------------
-# HUD styling
-# ---------------------------------------------------------------------------
 
-COLOR_HUD_BG = (15, 15, 25, 160)       # Semi-transparent dark panel
+COLOR_HUD_BG = (15, 15, 25, 160)
 COLOR_HUD_TEXT = (220, 220, 230)
 COLOR_HUD_ACCENT = (100, 200, 255)
 COLOR_HUD_DANGER = (255, 80, 80)
@@ -51,7 +48,6 @@ class HUD:
             "Arial", 14
         )
 
-        # State
         self._time_left: int = 0
         self._score: int = 0
         self._rank: int = 0
@@ -86,7 +82,6 @@ class HUD:
         self._render_debug_panel(screen)
         self._render_status(screen)
 
-    # ----- Timer (top center) -----
 
     def _render_timer(self, screen: pygame.Surface) -> None:
         """Draw the countdown timer at the top center."""
@@ -94,12 +89,10 @@ class HUD:
         seconds = self._time_left % 60
         time_str = f"{minutes:01d}:{seconds:02d}"
 
-        # Danger color when low
         color = COLOR_HUD_DANGER if self._time_left <= 10 else COLOR_HUD_ACCENT
 
         text_surf = self._font_large.render(time_str, True, color)
 
-        # Background panel
         panel_w = text_surf.get_width() + 30
         panel_h = text_surf.get_height() + 12
         panel_rect = pygame.Rect(
@@ -119,7 +112,6 @@ class HUD:
             ),
         )
 
-    # ----- Score & rank (top left) -----
 
     def _render_score_panel(self, screen: pygame.Surface) -> None:
         """Draw the score and rank panel at the top left."""
@@ -130,18 +122,15 @@ class HUD:
         screen.blit(panel_surf, panel_rect.topleft)
         pygame.draw.rect(screen, (60, 70, 100), panel_rect, 1, border_radius=6)
 
-        # Score
         score_surf = self._font_medium.render(
             f"Score: {self._score}", True, COLOR_HUD_TEXT
         )
         screen.blit(score_surf, (20, 16))
 
-        # Rank
         rank_str = f"Rank: #{self._rank}/{self._total_players}"
         rank_surf = self._font_small.render(rank_str, True, COLOR_HUD_ACCENT)
         screen.blit(rank_surf, (20, 46))
 
-    # ----- Debug panel — FPS & Ping (top right) -----
 
     def _render_debug_panel(self, screen: pygame.Surface) -> None:
         """Draw FPS and ping at the top right."""
@@ -152,14 +141,12 @@ class HUD:
         screen.blit(panel_surf, panel_rect.topleft)
         pygame.draw.rect(screen, (60, 70, 100), panel_rect, 1, border_radius=6)
 
-        # FPS
         fps_color = COLOR_HUD_SUCCESS if self._fps >= 55 else COLOR_HUD_DANGER
         fps_surf = self._font_small.render(
             f"FPS: {self._fps}", True, fps_color
         )
         screen.blit(fps_surf, (self._sw - panel_w, 16))
 
-        # Ping
         ping_color = (
             COLOR_HUD_SUCCESS if self._ping < 80
             else COLOR_HUD_DANGER
@@ -169,17 +156,15 @@ class HUD:
         )
         screen.blit(ping_surf, (self._sw - panel_w, 36))
 
-    # ----- Alive / Dead status (bottom center) -----
 
     def _render_status(self, screen: pygame.Surface) -> None:
         """Draw alive/dead status indicator at the bottom center."""
         if self._alive:
-            return  # Don't clutter the screen when alive
+            return
 
         text = "YOU DIED"
         text_surf = self._font_large.render(text, True, COLOR_HUD_DANGER)
 
-        # Dim background
         overlay = pygame.Surface((self._sw, 60), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 120))
         screen.blit(overlay, (0, self._sh // 2 - 30))

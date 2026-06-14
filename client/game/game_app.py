@@ -19,7 +19,6 @@ from game.networking.event_dispatcher import EventDispatcher
 from game.networking.websocket_client import WebSocketClient
 from game.scene_manager import SceneManager
 
-# Import all scene classes for registration
 from game.scenes.menu_scene import MenuScene
 from game.scenes.matchmaking_scene import MatchmakingScene
 from game.scenes.loading_scene import LoadingScene
@@ -31,9 +30,6 @@ from game.scenes.create_room_scene import CreateRoomScene
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Window configuration
-# ---------------------------------------------------------------------------
 
 SCREEN_WIDTH: int = 1280
 SCREEN_HEIGHT: int = 720
@@ -53,7 +49,6 @@ class GameApp:
     """
 
     def __init__(self) -> None:
-        # Pygame display
         self._screen: pygame.Surface = pygame.display.set_mode(
             (SCREEN_WIDTH, SCREEN_HEIGHT),
             pygame.DOUBLEBUF,
@@ -61,12 +56,10 @@ class GameApp:
         pygame.display.set_caption(WINDOW_TITLE)
         self._clock: pygame.time.Clock = pygame.time.Clock()
 
-        # Shared subsystems
         self._event_dispatcher: EventDispatcher = EventDispatcher()
         self._network_client: WebSocketClient = WebSocketClient(self._event_dispatcher)
         self._scene_manager: SceneManager = SceneManager(self)
 
-        # Register all scenes
         self._scene_manager.register("menu", MenuScene)
         self._scene_manager.register("matchmaking", MatchmakingScene)
         self._scene_manager.register("loading", LoadingScene)
@@ -75,16 +68,12 @@ class GameApp:
         self._scene_manager.register("lobby", LobbyScene)
         self._scene_manager.register("create_room", CreateRoomScene)
 
-        # Shared state between scenes
         self.match_data: dict[str, Any] = {}
         self.match_results: dict[str, Any] = {}
-        # before MenuScene sets it. Default empty string prevents AttributeError.
         self.username: str = ""
-        # can safely read it before any room is joined/created.
         self.room_state: dict[str, Any] = {}
         self._running: bool = False
 
-    # ----- Properties -----
 
     @property
     def screen_size(self) -> tuple[int, int]:
@@ -103,7 +92,6 @@ class GameApp:
     def event_dispatcher(self) -> EventDispatcher:
         return self._event_dispatcher
 
-    # ----- Main loop -----
 
     async def run(self) -> None:
         """
@@ -115,14 +103,11 @@ class GameApp:
         """
         self._running = True
 
-        # Start on the main menu
         self._scene_manager.switch("menu")
 
         while self._running:
-            # Delta time in seconds
             dt = self._clock.tick(TARGET_FPS) / 1000.0
 
-            # --- Event polling ---
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self._running = False
@@ -132,14 +117,11 @@ class GameApp:
             if not self._running:
                 break
 
-            # --- Update ---
             self._scene_manager.update(dt)
 
-            # --- Render ---
             self._scene_manager.render(self._screen)
             pygame.display.flip()
 
-            # Yield to asyncio event loop (lets WebSocket recv run)
             await asyncio.sleep(0)
 
     async def shutdown(self) -> None:

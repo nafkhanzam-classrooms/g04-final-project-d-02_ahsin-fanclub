@@ -20,25 +20,21 @@ if TYPE_CHECKING:
     from game.rendering.interpolation import InterpolatedState
 
 
-# ---------------------------------------------------------------------------
-# Color palette
-# ---------------------------------------------------------------------------
 
 COLOR_BG = (15, 15, 25)
 COLOR_GRID = (25, 25, 40)
 COLOR_ARENA_BORDER = (255, 60, 80)
 COLOR_ARENA_FILL = (12, 12, 20)
 
-# Snake color palette — each snake gets a different color based on ID
 SNAKE_COLORS: list[tuple[int, int, int]] = [
-    (0, 230, 118),    # Green
-    (41, 121, 255),   # Blue
-    (255, 196, 0),    # Amber
-    (213, 0, 249),    # Purple
-    (255, 61, 0),     # Deep Orange
-    (0, 229, 255),    # Cyan
-    (255, 110, 64),   # Coral
-    (118, 255, 3),    # Lime
+    (0, 230, 118),
+    (41, 121, 255),
+    (255, 196, 0),
+    (213, 0, 249),
+    (255, 61, 0),
+    (0, 229, 255),
+    (255, 110, 64),
+    (118, 255, 3),
 ]
 
 FOOD_COLORS: list[tuple[int, int, int]] = [
@@ -51,12 +47,7 @@ FOOD_COLORS: list[tuple[int, int, int]] = [
 ]
 
 
-# ---------------------------------------------------------------------------
-# Arena configuration
-# ---------------------------------------------------------------------------
 
-# from server/shared/constants.py (WORLD_WIDTH = 4000, WORLD_HEIGHT = 4000).
-# Previously was 2000x2000, causing boundary and spatial mismatch.
 ARENA_WIDTH: int = 4000
 ARENA_HEIGHT: int = 4000
 GRID_SPACING: int = 50
@@ -78,7 +69,6 @@ class Renderer:
     def camera(self) -> Camera:
         return self._camera
 
-    # ----- Public API -----
 
     def render_frame(
         self,
@@ -92,14 +82,12 @@ class Renderer:
         self._render_foods(screen, state.foods)
         self._render_snakes(screen, state.snakes, state.local_player_id)
 
-    # ----- Background grid -----
 
     def _render_grid(self, screen: pygame.Surface) -> None:
         """Draw a subtle grid pattern for spatial awareness."""
         vis = self._camera.get_visible_rect()
         sw, sh = screen.get_size()
 
-        # Compute grid-aligned start positions
         start_x = vis.left - (vis.left % GRID_SPACING)
         start_y = vis.top - (vis.top % GRID_SPACING)
 
@@ -111,11 +99,9 @@ class Renderer:
             _, sy = self._camera.world_to_screen(0, gy)
             pygame.draw.line(screen, COLOR_GRID, (0, sy), (sw, sy), 1)
 
-    # ----- Arena boundary -----
 
     def _render_arena_boundary(self, screen: pygame.Surface) -> None:
         """Draw the arena boundary rectangle."""
-        # Top-left and bottom-right in screen coords
         sx1, sy1 = self._camera.world_to_screen(0, 0)
         sx2, sy2 = self._camera.world_to_screen(ARENA_WIDTH, ARENA_HEIGHT)
 
@@ -124,11 +110,8 @@ class Renderer:
             int(sx2 - sx1), int(sy2 - sy1),
         )
 
-        # Dim area outside the arena
-        # (skip for performance — only draw the border line)
         pygame.draw.rect(screen, COLOR_ARENA_BORDER, rect, 3)
 
-    # ----- Snakes -----
 
     def _render_snakes(
         self,
@@ -137,7 +120,6 @@ class Renderer:
         local_id: int,
     ) -> None:
         """Draw all snakes. The local player's snake is drawn last (on top)."""
-        # Sort: local snake drawn last
         sorted_snakes = sorted(snakes, key=lambda s: s.id == local_id)
 
         for snake in sorted_snakes:
@@ -161,7 +143,6 @@ class Renderer:
         size_scale = 1.0 + min(max(snake.length - 5, 0) * 0.015, 0.12)
         segment_radius = max(4, int(9 * size_scale))
 
-        # Draw body segments (back to front)
         for i in reversed(range(segment_count)):
             seg = snake.segments[i]
             sx, sy = self._camera.world_to_screen(seg.x, seg.y)
@@ -193,14 +174,11 @@ class Renderer:
                 screen, outline_color, (int(sx), int(sy)), segment_radius, 2
             )
 
-        # Draw head
         head = snake.segments[0]
         hx, hy = self._camera.world_to_screen(head.x, head.y)
 
-        # Head circle
         pygame.draw.circle(screen, color, (int(hx), int(hy)), segment_radius)
 
-        # Eyes
         angle_rad = math.radians(snake.direction)
         eye_offset = max(4, int(segment_radius * 0.45))
         for sign in (-1, 1):
@@ -208,12 +186,10 @@ class Renderer:
             ex = hx + math.cos(perp_angle) * eye_offset
             ey = hy + math.sin(perp_angle) * eye_offset
             pygame.draw.circle(screen, (255, 255, 255), (int(ex), int(ey)), 2)
-            # Pupil
             px = ex + math.cos(angle_rad) * 1.5
             py = ey + math.sin(angle_rad) * 1.5
             pygame.draw.circle(screen, (10, 10, 10), (int(px), int(py)), 1)
 
-        # Draw name label above the head
         if snake.name:
             name_surf = self._name_font.render(snake.name, True, (220, 220, 220))
             screen.blit(
@@ -221,7 +197,6 @@ class Renderer:
                 (int(hx) - name_surf.get_width() // 2, int(hy) - 28),
             )
 
-    # ----- Food -----
 
     def _render_foods(
         self, screen: pygame.Surface, foods: list[FoodData]
@@ -230,14 +205,12 @@ class Renderer:
         vis = self._camera.get_visible_rect()
 
         for i, food in enumerate(foods):
-            # Frustum culling — skip off-screen food
             if not vis.collidepoint(int(food.x), int(food.y)):
                 continue
 
             sx, sy = self._camera.world_to_screen(food.x, food.y)
             color = FOOD_COLORS[i % len(FOOD_COLORS)]
 
-            # Outer glow
             glow_surf = pygame.Surface((20, 20), pygame.SRCALPHA)
             glow_color = (*color, 50)
             pygame.draw.circle(glow_surf, glow_color, (10, 10), 8)
@@ -247,5 +220,4 @@ class Renderer:
                 special_flags=pygame.BLEND_RGBA_ADD,
             )
 
-            # Core
             pygame.draw.circle(screen, color, (int(sx), int(sy)), 4)

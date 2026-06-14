@@ -13,9 +13,6 @@ from typing import Any
 import msgpack
 
 
-# ---------------------------------------------------------------------------
-# Message Types — Client → Server
-# ---------------------------------------------------------------------------
 
 class ClientMessageType(str, Enum):
     """Messages the client can send to the server."""
@@ -28,9 +25,6 @@ class ClientMessageType(str, Enum):
     LEAVE_ROOM = "leave_room"
 
 
-# ---------------------------------------------------------------------------
-# Message Types — Server → Client
-# ---------------------------------------------------------------------------
 
 class ServerMessageType(str, Enum):
     """Messages the server can send to the client."""
@@ -43,9 +37,6 @@ class ServerMessageType(str, Enum):
     ERROR = "error"
 
 
-# ---------------------------------------------------------------------------
-# Encoding helpers
-# ---------------------------------------------------------------------------
 
 def encode_message(data: dict[str, Any]) -> bytes:
     """Encode a Python dict to msgpack bytes for transmission."""
@@ -57,9 +48,6 @@ def decode_message(raw: bytes) -> dict[str, Any]:
     return msgpack.unpackb(raw, raw=False)
 
 
-# ---------------------------------------------------------------------------
-# Convenience constructors — Client messages
-# ---------------------------------------------------------------------------
 
 def make_input_message(direction: float) -> bytes:
     """Create an encoded input message with the given direction angle (degrees)."""

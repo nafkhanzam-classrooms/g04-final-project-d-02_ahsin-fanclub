@@ -23,9 +23,6 @@ if TYPE_CHECKING:
     from game.game_app import GameApp
 
 
-# ---------------------------------------------------------------------------
-# Colors
-# ---------------------------------------------------------------------------
 
 COLOR_BG_TOP = (10, 10, 30)
 COLOR_BG_BOTTOM = (20, 15, 50)
@@ -129,7 +126,6 @@ class MenuScene(Scene):
 
         self._version_font: pygame.font.Font = pygame.font.SysFont("Arial", 12)
 
-        # Decorative floating particles
         self._particles: list[dict] = []
         for _ in range(40):
             self._particles.append(
@@ -142,7 +138,6 @@ class MenuScene(Scene):
                 }
             )
 
-    # ----- Scene lifecycle -----
 
     def enter(self) -> None:
         """Called when entering the menu scene."""
@@ -152,7 +147,6 @@ class MenuScene(Scene):
         """Called when leaving the menu scene."""
         pass
 
-    # ----- Event handling -----
 
     def handle_event(self, event: pygame.event.Event) -> None:
         self._username_box.handle_event(event)
@@ -163,7 +157,6 @@ class MenuScene(Scene):
         if self._join_modal.visible:
             self._join_modal.handle_event(event)
 
-    # ----- Update -----
 
     def update(self, dt: float) -> None:
         sw, sh = self.app.screen_size
@@ -182,13 +175,11 @@ class MenuScene(Scene):
                 p["y"] = sh + 10
                 p["x"] = random.uniform(0, sw)
 
-    # ----- Render -----
 
     def render(self, screen: pygame.Surface) -> None:
         sw, sh = screen.get_size()
         elapsed = time.monotonic() - self._start_time
 
-        # Gradient background
         for y_line in range(sh):
             ratio = y_line / sh
             r = int(COLOR_BG_TOP[0] + (COLOR_BG_BOTTOM[0] - COLOR_BG_TOP[0]) * ratio)
@@ -196,7 +187,6 @@ class MenuScene(Scene):
             b = int(COLOR_BG_TOP[2] + (COLOR_BG_BOTTOM[2] - COLOR_BG_TOP[2]) * ratio)
             pygame.draw.line(screen, (r, g, b), (0, y_line), (sw, y_line))
 
-        # Floating particles
         for p in self._particles:
             alpha = 0.4 + 0.3 * math.sin(elapsed * 1.5 + p["phase"])
             c = (
@@ -218,11 +208,9 @@ class MenuScene(Scene):
         if self._error_label.text:
             self._error_label.render(screen)
 
-        # Version text
         ver = self._version_font.render("Final Project Network Programming", True, (60, 60, 80))
         screen.blit(ver, (sw // 2 - ver.get_width() // 2, sh - 30))
 
-    # ----- Callbacks -----
 
     def _get_username(self) -> str:
         return self._username_box.get_text().strip()

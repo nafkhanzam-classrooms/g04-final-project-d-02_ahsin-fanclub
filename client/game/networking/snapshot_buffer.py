@@ -44,7 +44,6 @@ class SnapshotBuffer:
         """
         tick: int = snapshot_data.get("tick", 0)
 
-        # Discard out-of-order / duplicate
         if self._buffer and tick <= self._buffer[-1].tick:
             return
 
@@ -55,7 +54,6 @@ class SnapshotBuffer:
         )
         self._buffer.append(ts)
 
-        # Prune oldest
         if len(self._buffer) > self.max_size:
             self._buffer = self._buffer[-self.max_size:]
 
@@ -72,22 +70,18 @@ class SnapshotBuffer:
         if not self._buffer:
             return None, None
 
-        # render_time is before our oldest snapshot
         if render_time <= self._buffer[0].local_time:
             return self._buffer[0], None
 
-        # render_time is after our newest snapshot
         if render_time >= self._buffer[-1].local_time:
             return self._buffer[-1], None
 
-        # Find bracketing pair
         for i in range(len(self._buffer) - 1):
             a = self._buffer[i]
             b = self._buffer[i + 1]
             if a.local_time <= render_time <= b.local_time:
                 return a, b
 
-        # Fallback — should not happen
         return self._buffer[-1], None
 
     @property

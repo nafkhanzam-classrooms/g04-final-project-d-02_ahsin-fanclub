@@ -94,11 +94,9 @@ class SceneManager:
         if name not in self._scenes:
             raise ValueError(f"Unknown scene: {name!r}")
 
-        # Exit current scene
         if self._active is not None:
             self._active.exit()
 
-        # Create and enter new scene
         scene_class = self._scenes[name]
         self._active = scene_class(self._app)
         self._active_name = name

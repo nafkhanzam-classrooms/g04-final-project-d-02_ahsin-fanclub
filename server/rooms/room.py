@@ -58,20 +58,14 @@ class Room:
     room_id: str
     player_ids: list[int] = field(default_factory=list)
     state: RoomState = RoomState.WAITING
-    # The first player added becomes the host. If the host leaves, the next
-    # player in the list is promoted.
     host_player_id: int = -1
     _game_world: GameWorld | None = field(default=None, init=False, repr=False)
     _game_task: asyncio.Task[None] | None = field(default=None, init=False, repr=False)
 
-    # Callback for sending messages (set by RoomManager)
     _send_callback: Any = field(default=None, init=False, repr=False)
-    # Callback for notifying room finished
     _finish_callback: Any = field(default=None, init=False, repr=False)
-    # Player name map
     _player_names: dict[int, str] = field(default_factory=dict, init=False, repr=False)
 
-    # ----- Player management -----
 
     def add_player(self, player_id: int, name: str = "") -> None:
         """Add a player to the room."""
@@ -89,7 +83,6 @@ class Room:
             if self.host_player_id == player_id:
                 self.host_player_id = self.player_ids[0] if self.player_ids else -1
 
-        # If game is running, remove from simulation
         if self._game_world and self.state == RoomState.RUNNING:
             self._game_world.remove_player(player_id)
 
@@ -103,7 +96,6 @@ class Room:
         """Whether the room has reached max capacity."""
         return self.player_count >= MAX_PLAYERS_PER_ROOM
 
-    # ----- Game lifecycle -----
 
     def set_send_callback(self, callback: Any) -> None:
         """Set the async callback for sending messages to players."""
@@ -122,7 +114,6 @@ class Room:
         """
         self.state = RoomState.STARTING
 
-        # Notify all players about the match
         match_found = MatchFoundPayload(
             room_id=self.room_id,
             player_count=self.player_count,
@@ -132,16 +123,13 @@ class Room:
             if self._send_callback:
                 await self._send_callback(pid, match_found)
 
-        # Wait for countdown
         await asyncio.sleep(MATCH_START_COUNTDOWN)
 
-        # Send MATCH_START
         match_start = MatchStartPayload(room_id=self.room_id).to_dict()
         for pid in self.player_ids:
             if self._send_callback:
                 await self._send_callback(pid, match_start)
 
-        # Initialize and start the game
         await self._start_game()
 
     async def _start_game(self) -> None:
@@ -155,7 +143,6 @@ class Room:
 
         self._game_world.initialize()
 
-        # Start the game loop task
         self._game_task = asyncio.create_task(self._game_loop())
         logger.info("Room %s: game started with %d players", self.room_id, self.player_count)
 
@@ -175,10 +162,8 @@ class Room:
             while self.state == RoomState.RUNNING:
                 tick_start = time.monotonic()
 
-                # 1. Update simulation
                 self._game_world.update(TICK_INTERVAL)
 
-                # 2. Check eliminations and notify
                 eliminations = self._game_world.get_pending_eliminations()
                 for elim_pid in eliminations:
                     payload = PlayerEliminatedPayload(player_id=elim_pid).to_dict()
@@ -186,13 +171,11 @@ class Room:
                         if self._send_callback:
                             await self._send_callback(pid, payload)
 
-                # 3. Check win condition
                 result = self._game_world.check_win_condition()
                 if result is not None:
                     await self._end_match(result)
                     return
 
-                # 4. Broadcast snapshots (per-player with local_player_id)
                 snapshot_base = self._game_world.get_snapshot()
                 for pid in self.player_ids:
                     snapshot = dict(snapshot_base)
@@ -200,7 +183,6 @@ class Room:
                     if self._send_callback:
                         await self._send_callback(pid, snapshot)
 
-                # Fixed timestep sleep
                 elapsed = time.monotonic() - tick_start
                 sleep_time = TICK_INTERVAL - elapsed
                 if sleep_time > 0:
@@ -224,7 +206,6 @@ class Room:
             rankings=result.get("rankings", []),
         ).to_dict()
 
-        # Also include local_player_id for each recipient
         for pid in self.player_ids:
             per_player = dict(payload)
             per_player["local_player_id"] = pid
@@ -240,14 +221,12 @@ class Room:
         if self._finish_callback:
             await self._finish_callback(self.room_id)
 
-    # ----- Input forwarding -----
 
     def receive_input(self, player_id: int, direction: float) -> None:
         """Forward a player's direction input to the simulation."""
         if self._game_world and self.state == RoomState.RUNNING:
             self._game_world.receive_input(player_id, direction)
 
-    # ----- Cleanup -----
 
     async def destroy(self) -> None:
         """Cancel the game loop and clean up resources."""

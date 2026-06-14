@@ -37,7 +37,6 @@ class EliminationSystem:
         snake.alive = False
         self._pending_eliminations.append(snake.player_id)
 
-        # Convert body segments to food
         segment_positions = [(seg.x, seg.y) for seg in snake.segments]
         if segment_positions:
             self._food_system.spawn_death_food(segment_positions, DEATH_FOOD_RATIO)

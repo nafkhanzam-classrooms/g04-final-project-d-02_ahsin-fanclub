@@ -16,8 +16,6 @@ import os
 import signal
 import sys
 
-# Ensure the project root is on sys.path so `from server.*` imports
-# work regardless of where the script is invoked from.
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
@@ -25,9 +23,6 @@ if _PROJECT_ROOT not in sys.path:
 from server.networking.websocket_server import WebSocketServer
 from server.shared.constants import WEBSOCKET_HOST, WEBSOCKET_PORT
 
-# ---------------------------------------------------------------------------
-# Logging configuration
-# ---------------------------------------------------------------------------
 
 logging.basicConfig(
     level=logging.INFO,
@@ -41,7 +36,6 @@ async def main() -> None:
     """Entry point for the Snake.io game server."""
     server = WebSocketServer(host=WEBSOCKET_HOST, port=WEBSOCKET_PORT)
 
-    # Handle graceful shutdown on SIGINT / SIGTERM
     loop = asyncio.get_running_loop()
 
     def _signal_handler() -> None:
@@ -52,7 +46,6 @@ async def main() -> None:
         try:
             loop.add_signal_handler(sig, _signal_handler)
         except NotImplementedError:
-            # Windows doesn't support add_signal_handler
             pass
 
     logger.info(

@@ -43,12 +43,10 @@ class CollisionSystem:
         alive_snakes = [s for s in snakes if s.alive]
 
         for snake in alive_snakes:
-            # Boundary check
             if self._check_boundary(snake):
                 dead.add(snake.player_id)
                 continue
 
-            # Head-vs-body check against other snakes
             for other in alive_snakes:
                 if other.player_id == snake.player_id:
                     continue
@@ -56,8 +54,6 @@ class CollisionSystem:
                     dead.add(snake.player_id)
                     break
 
-        # Policy: both snakes die on head-on collision (mutual kill).
-        # This is checked separately to avoid order-dependent results.
         for i, snake_a in enumerate(alive_snakes):
             if snake_a.player_id in dead:
                 continue
@@ -94,7 +90,6 @@ class CollisionSystem:
 
         hx, hy = snake.x, snake.y
 
-        # Skip the other snake's head segment (index 0)
         for i, seg in enumerate(other.segments):
             if i == 0:
                 continue

@@ -18,7 +18,6 @@ from server.shared.schemas import RoomPlayer, RoomStatePayload
 
 logger = logging.getLogger(__name__)
 
-# Type alias for the send callback
 SendCallback = Callable[[int, dict[str, Any]], Coroutine[Any, Any, None]]
 
 
@@ -31,11 +30,10 @@ class RoomManager:
 
     def __init__(self, send_callback: SendCallback, sessions: dict[int, PlayerSession]) -> None:
         self._rooms: dict[str, Room] = {}
-        self._player_room: dict[int, str] = {}  # player_id → room_id
+        self._player_room: dict[int, str] = {}
         self._send_callback: SendCallback = send_callback
         self._sessions: dict[int, PlayerSession] = sessions
 
-    # ----- Room creation -----
 
     def _generate_room_code(self) -> str:
         """Generate a unique 6-digit room code."""
@@ -113,7 +111,6 @@ class RoomManager:
 
     def build_room_state(self, room: Room) -> dict[str, Any]:
         """Build a client-facing room state payload."""
-        # instead of relying on player_ids[0] which is fragile.
         host_player_id = room.host_player_id
         players = [
             RoomPlayer(
@@ -141,7 +138,6 @@ class RoomManager:
             state["local_player_id"] = pid
             await self._send_callback(pid, state)
 
-    # ----- Lookups -----
 
     def get_room(self, room_id: str) -> Room | None:
         """Get a room by its ID."""
@@ -159,7 +155,6 @@ class RoomManager:
         """Number of currently active rooms."""
         return len(self._rooms)
 
-    # ----- Player removal -----
 
     async def remove_player_from_room(self, player_id: int) -> None:
         """Remove a player from their current room."""
@@ -168,17 +163,14 @@ class RoomManager:
             return
         logger.info("Removed player %d from room %s", player_id, room.room_id)
 
-        # If room is empty or has too few players during game, destroy it
         if room.player_count == 0:
             await self._destroy_room(room.room_id)
         else:
             await self.broadcast_room_state(room)
 
-    # ----- Cleanup -----
 
     async def _on_room_finished(self, room_id: str) -> None:
         """Called when a room's match ends."""
-        # Remove player→room mappings
         room = self._rooms.get(room_id)
         if room:
             for pid in list(room.player_ids):
@@ -187,14 +179,12 @@ class RoomManager:
                 if session:
                     session.room_id = None
 
-        # Schedule cleanup after a short delay so clients can receive final messages
         await self._destroy_room(room_id)
 
     async def _destroy_room(self, room_id: str) -> None:
         """Destroy a room and clean up all references."""
         room = self._rooms.pop(room_id, None)
         if room:
-            # Clean up player mappings
             for pid in list(room.player_ids):
                 self._player_room.pop(pid, None)
                 session = self._sessions.get(pid)

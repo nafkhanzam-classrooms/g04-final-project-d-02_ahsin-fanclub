@@ -54,13 +54,11 @@ class WebSocketServer:
         self._host: str = host
         self._port: int = port
 
-        # Core components
         self._connections: ConnectionManager = ConnectionManager()
         self._rate_limiter: RateLimiter = RateLimiter()
         self._router: MessageRouter = MessageRouter(self._rate_limiter)
         self._sessions: dict[int, PlayerSession] = {}
 
-        # Room & matchmaking (use send callback)
         self._room_manager: RoomManager = RoomManager(self._send_to_player, self._sessions)
         self._matchmaking: MatchmakingService = MatchmakingService(
             self._room_manager,
@@ -68,12 +66,10 @@ class WebSocketServer:
             self._send_to_player,
         )
 
-        # Register message handlers
         self._register_handlers()
 
         self._server: Any = None
 
-    # ----- Server lifecycle -----
 
     async def start(self) -> None:
         """Start the WebSocket server and serve forever."""
@@ -102,7 +98,6 @@ class WebSocketServer:
 
         logger.info("Server shutdown complete")
 
-    # ----- Connection handling -----
 
     async def _handle_connection(self, ws: ServerConnection) -> None:
         """
@@ -125,7 +120,6 @@ class WebSocketServer:
                 if isinstance(raw, bytes):
                     await self._process_message(player_id, raw)
                 elif isinstance(raw, str):
-                    # Fallback for text frames (shouldn't happen with msgpack)
                     import json
                     try:
                         data = json.loads(raw)
@@ -157,13 +151,10 @@ class WebSocketServer:
         """Clean up when a player disconnects."""
         session = self._sessions.pop(player_id, None)
 
-        # Remove from matchmaking queue
         await self._matchmaking.remove_player(player_id)
 
-        # Remove from room
         await self._room_manager.remove_player_from_room(player_id)
 
-        # Clean up connection
         self._connections.unregister(player_id)
         self._router.remove_player(player_id)
 
@@ -173,7 +164,6 @@ class WebSocketServer:
             self._connections.connected_count,
         )
 
-    # ----- Message handlers -----
 
     def _register_handlers(self) -> None:
         """Register all message type handlers with the router."""
@@ -260,7 +250,6 @@ class WebSocketServer:
             await self._send_error(player_id, "You are not in a room.")
             return
 
-        # instead of fragile player_ids[0] index check.
         if room.host_player_id != player_id:
             await self._send_error(player_id, "Only the host can start the room.")
             return
@@ -297,7 +286,6 @@ class WebSocketServer:
         if not math.isfinite(direction):
             return
 
-        # Forward to the player's room
         room = self._room_manager.get_player_room(player_id)
         if room:
             room.receive_input(player_id, direction)
@@ -306,7 +294,6 @@ class WebSocketServer:
         """Respond to a ping with a pong."""
         await self._send_to_player(player_id, {"type": "pong"})
 
-    # ----- Sending -----
 
     async def _send_to_player(self, player_id: int, data: dict[str, Any]) -> None:
         """Send a message to a specific player."""

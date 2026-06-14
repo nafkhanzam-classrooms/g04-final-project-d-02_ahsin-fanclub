@@ -46,7 +46,6 @@ class MovementSystem:
         """Smoothly rotate direction toward target_direction."""
         diff = snake.target_direction - snake.direction
 
-        # Normalize to [-180, 180]
         while diff > 180:
             diff -= 360
         while diff < -180:
@@ -60,7 +59,6 @@ class MovementSystem:
         else:
             snake.direction -= max_turn
 
-        # Normalize direction to [0, 360)
         snake.direction %= 360
 
     @staticmethod
@@ -69,13 +67,10 @@ class MovementSystem:
         angle_rad = math.radians(snake.direction)
         distance = snake.speed * dt
 
-        # Move head
         snake.x += math.cos(angle_rad) * distance
         snake.y += math.sin(angle_rad) * distance
 
-        # Insert new head segment
         snake.segments.appendleft(SnakeSegment(snake.x, snake.y))
 
-        # Trim tail to maintain length
         while len(snake.segments) > snake.length:
             snake.segments.pop()

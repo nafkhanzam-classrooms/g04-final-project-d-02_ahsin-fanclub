@@ -39,15 +39,12 @@ class Camera:
         self.lerp_speed: float = lerp_speed
         self.dead_zone: float = dead_zone
 
-        # Camera world position (center of the viewport in world coords)
         self._x: float = 0.0
         self._y: float = 0.0
 
-        # Target position (usually the player's snake head)
         self._target_x: float = 0.0
         self._target_y: float = 0.0
 
-    # ----- Properties -----
 
     @property
     def position(self) -> tuple[float, float]:
@@ -59,7 +56,6 @@ class Camera:
         """Current target position the camera is tracking."""
         return (self._target_x, self._target_y)
 
-    # ----- Public methods -----
 
     def set_target(self, x: float, y: float) -> None:
         """Set the world position the camera should follow."""
@@ -84,12 +80,10 @@ class Camera:
         dx = self._target_x - self._x
         dy = self._target_y - self._y
 
-        # Only move if target is outside the dead zone
         dist_sq = dx * dx + dy * dy
         if dist_sq < self.dead_zone * self.dead_zone:
             return
 
-        # Lerp factor — clamped to [0, 1]
         t = min(1.0, self.lerp_speed * dt)
         self._x += dx * t
         self._y += dy * t

@@ -51,7 +51,6 @@ class RateLimiter:
         now = time.monotonic()
         bucket = self._buckets[player_id]
 
-        # Prune timestamps outside the window
         cutoff = now - self._window
         bucket.timestamps = [t for t in bucket.timestamps if t > cutoff]
 

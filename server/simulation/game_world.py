@@ -49,7 +49,6 @@ class GameWorld:
         self._players: dict[int, Player] = {}
         self._tick: int = 0
 
-        # Sub-systems (composed, not inherited)
         self._movement: MovementSystem = MovementSystem()
         self._collision: CollisionSystem = CollisionSystem()
         self._food: FoodSystem = FoodSystem()
@@ -59,7 +58,6 @@ class GameWorld:
         self._win_condition: WinConditionSystem = WinConditionSystem(self._timer)
         self._snapshot_gen: SnapshotGenerator = SnapshotGenerator()
 
-    # ----- Player management -----
 
     def add_player(self, player_id: int, name: str = "") -> None:
         """
@@ -70,7 +68,6 @@ class GameWorld:
         if player_id in self._players:
             return
 
-        # Spawn position: random, away from edges
         margin = 200.0
         x = random.uniform(margin, WORLD_WIDTH - margin)
         y = random.uniform(margin, WORLD_HEIGHT - margin)
@@ -97,7 +94,6 @@ class GameWorld:
         if player and player.snake.alive:
             self._elimination.eliminate(player.snake)
 
-    # ----- Input -----
 
     def receive_input(self, player_id: int, direction: float) -> None:
         """
@@ -109,7 +105,6 @@ class GameWorld:
         if player and player.snake.alive:
             player.snake.target_direction = direction
 
-    # ----- Simulation tick -----
 
     def initialize(self) -> None:
         """Initialize the world (spawn food, reset timer)."""
@@ -133,35 +128,26 @@ class GameWorld:
         """
         snakes = self._get_all_snakes()
 
-        # 1. Movement
         self._movement.update(snakes, dt)
 
-        # 2. Food consumption
         consumed = self._food.check_consumption(snakes)
         for player_id, food in consumed:
             player = self._players.get(player_id)
             if player:
-                # 3. Score update
                 self._scoring.apply_food_eaten(player.snake)
 
-        # 4. Collision detection
         dead_ids = self._collision.check_collisions(snakes)
         for dead_id in dead_ids:
             player = self._players.get(dead_id)
             if player:
-                # 5. Elimination
                 self._elimination.eliminate(player.snake)
 
-        # 6. Maintain food count
         self._food.maintain_count()
 
-        # 7. Timer
         self._timer.update(dt)
 
-        # 8. Tick counter
         self._tick += 1
 
-    # ----- Queries -----
 
     def get_snapshot(self) -> dict[str, Any]:
         """Generate a world state snapshot for broadcasting."""
@@ -180,7 +166,6 @@ class GameWorld:
         """Check if the match should end. Returns result dict or None."""
         return self._win_condition.check(self._get_all_snakes())
 
-    # ----- Private -----
 
     def _get_all_snakes(self) -> list[Snake]:
         """Get a list of all snake entities."""

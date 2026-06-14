@@ -49,7 +49,6 @@ from game.entities.snake import SnakeData, SnakeSegment
 from game.networking.snapshot_buffer import SnapshotBuffer
 
 
-# Default interpolation delay in seconds (100 ms)
 INTERP_DELAY: float = 0.100
 
 
@@ -81,7 +80,6 @@ class SnapshotInterpolator:
         self._buffer: SnapshotBuffer = SnapshotBuffer(max_size=30)
         self._interp_delay: float = interp_delay
 
-        # Client-side prediction state for local player
         self._predicted_direction: float | None = None
         self._local_player_id: int = -1
 
@@ -94,7 +92,6 @@ class SnapshotInterpolator:
         """Add a new server snapshot to the buffer."""
         self._buffer.push(snapshot_data)
 
-        # Track the local player ID
         if "local_player_id" in snapshot_data:
             self._local_player_id = snapshot_data["local_player_id"]
 
@@ -117,14 +114,11 @@ class SnapshotInterpolator:
         a, b = self._buffer.get_bracketing(render_time)
 
         if a is None:
-            # No data at all
             return InterpolatedState()
 
         if b is None:
-            # Only one snapshot — use it directly
             return self._state_from_snapshot(a.data)
 
-        # Compute blend factor
         time_span = b.local_time - a.local_time
         if time_span <= 0:
             alpha = 1.0
@@ -139,7 +133,6 @@ class SnapshotInterpolator:
         self._buffer.clear()
         self._predicted_direction = None
 
-    # ----- Private helpers -----
 
     def _state_from_snapshot(self, data: dict[str, Any]) -> InterpolatedState:
         """Build an InterpolatedState from a single snapshot (no blending)."""
@@ -150,7 +143,6 @@ class SnapshotInterpolator:
             FoodData.from_server(f) for f in data.get("foods", [])
         ]
 
-        # Apply client-side prediction to local snake
         self._apply_prediction(snakes)
 
         for snake in snakes:
@@ -175,7 +167,6 @@ class SnapshotInterpolator:
         snakes_a = {s["id"]: s for s in data_a.get("snakes", [])}
         snakes_b = {s["id"]: s for s in data_b.get("snakes", [])}
 
-        # Merge snake IDs from both snapshots
         all_ids = set(snakes_a.keys()) | set(snakes_b.keys())
         snakes: list[SnakeData] = []
 
@@ -186,19 +177,15 @@ class SnapshotInterpolator:
             if sa and sb:
                 snake = self._interpolate_snake(sa, sb, alpha)
             elif sb:
-                # New snake — snap to B
                 snake = SnakeData.from_server(sb)
             else:
-                # Snake only in A (possibly dead / disconnected) — use A
                 assert sa is not None
                 snake = SnakeData.from_server(sa)
 
             snakes.append(snake)
 
-        # Interpolate foods — foods don't move, just use snapshot B
         foods = [FoodData.from_server(f) for f in data_b.get("foods", [])]
 
-        # Apply prediction to local snake
         self._apply_prediction(snakes)
 
         for snake in snakes:

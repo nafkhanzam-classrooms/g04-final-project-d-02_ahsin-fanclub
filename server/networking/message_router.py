@@ -15,7 +15,6 @@ from server.networking.rate_limiter import RateLimiter
 
 logger = logging.getLogger(__name__)
 
-# Type alias for message handler coroutines
 MessageHandler = Callable[[int, dict[str, Any]], Coroutine[Any, Any, None]]
 
 

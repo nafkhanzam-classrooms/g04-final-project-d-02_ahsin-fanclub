@@ -88,9 +88,6 @@ class JoinRoomModal:
             on_click=self._submit,
         )
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
 
     def open(self) -> None:
         """Open the modal."""
@@ -107,9 +104,6 @@ class JoinRoomModal:
         """Return the current room code."""
         return self._code_box.get_text().strip()
 
-    # ------------------------------------------------------------------
-    # Internal
-    # ------------------------------------------------------------------
 
     def _submit(
         self,
@@ -127,9 +121,6 @@ class JoinRoomModal:
         if self._on_join:
             self._on_join(room_code)
 
-    # ------------------------------------------------------------------
-    # Event handling
-    # ------------------------------------------------------------------
 
     def handle_event(
         self,
@@ -151,13 +142,10 @@ class JoinRoomModal:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if not self._panel.rect.collidepoint(event.pos):
                 self.close()
-                return False  # Allow event to propagate to scene below
+                return False
 
         return True
 
-    # ------------------------------------------------------------------
-    # Update
-    # ------------------------------------------------------------------
 
     def update(
         self,
@@ -168,9 +156,6 @@ class JoinRoomModal:
         """
         pass
 
-    # ------------------------------------------------------------------
-    # Render
-    # ------------------------------------------------------------------
 
     def render(
         self,
@@ -179,7 +164,6 @@ class JoinRoomModal:
         if not self.visible:
             return
 
-        # Dark overlay
         overlay = pygame.Surface(
             screen.get_size(),
             pygame.SRCALPHA,

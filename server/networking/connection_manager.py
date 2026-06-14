@@ -31,7 +31,6 @@ class ConnectionManager:
         self._connections: dict[int, ServerConnection] = {}
         self._ws_to_id: dict[ServerConnection, int] = {}
 
-    # ----- Registration -----
 
     def register(self, ws: ServerConnection) -> int:
         """
@@ -53,7 +52,6 @@ class ConnectionManager:
             self._ws_to_id.pop(ws, None)
         logger.info("Player %d disconnected", player_id)
 
-    # ----- Lookups -----
 
     def get_ws(self, player_id: int) -> ServerConnection | None:
         """Get the WebSocket for a player ID."""
@@ -72,7 +70,6 @@ class ConnectionManager:
         """Number of currently connected players."""
         return len(self._connections)
 
-    # ----- Sending -----
 
     async def send_to(self, player_id: int, data: dict[str, Any]) -> None:
         """
