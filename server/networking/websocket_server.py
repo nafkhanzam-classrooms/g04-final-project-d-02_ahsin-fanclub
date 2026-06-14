@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 from typing import Any
 
 import websockets
@@ -259,7 +260,8 @@ class WebSocketServer:
             await self._send_error(player_id, "You are not in a room.")
             return
 
-        if not room.player_ids or room.player_ids[0] != player_id:
+        # instead of fragile player_ids[0] index check.
+        if room.host_player_id != player_id:
             await self._send_error(player_id, "Only the host can start the room.")
             return
 
@@ -290,6 +292,9 @@ class WebSocketServer:
         try:
             direction = float(direction)
         except (TypeError, ValueError):
+            return
+
+        if not math.isfinite(direction):
             return
 
         # Forward to the player's room

@@ -7,6 +7,7 @@ connection state, and the room they are currently in.
 
 from __future__ import annotations
 
+import secrets
 from dataclasses import dataclass, field
 from enum import Enum, auto
 
@@ -26,15 +27,21 @@ class PlayerSession:
     Server-side representation of a connected player.
 
     Attributes:
-        player_id:  Unique ID assigned by the ConnectionManager.
-        state:      Current lifecycle state.
-        room_id:    ID of the room the player is in (or None).
-        name:       Display name (auto-generated if not provided).
+        player_id:      Unique ID assigned by the ConnectionManager.
+        state:          Current lifecycle state.
+        room_id:        ID of the room the player is in (or None).
+        name:           Display name (auto-generated if not provided).
+        session_token:  ISSUE #11 FIX: Unique token for reconnect validation.
+        disconnect_time: ISSUE #11 FIX: Monotonic timestamp of last disconnect
+                         (0.0 if currently connected). Used to enforce
+                         reconnect timeout window.
     """
     player_id: int
     state: PlayerState = PlayerState.CONNECTED
     room_id: str | None = None
     name: str = ""
+    session_token: str = field(default_factory=lambda: secrets.token_hex(16))
+    disconnect_time: float = 0.0
 
     def __post_init__(self) -> None:
         if not self.name:

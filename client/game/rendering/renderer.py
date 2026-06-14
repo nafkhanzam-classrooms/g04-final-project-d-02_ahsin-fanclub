@@ -55,8 +55,10 @@ FOOD_COLORS: list[tuple[int, int, int]] = [
 # Arena configuration
 # ---------------------------------------------------------------------------
 
-ARENA_WIDTH: int = 2000
-ARENA_HEIGHT: int = 2000
+# from server/shared/constants.py (WORLD_WIDTH = 4000, WORLD_HEIGHT = 4000).
+# Previously was 2000x2000, causing boundary and spatial mismatch.
+ARENA_WIDTH: int = 4000
+ARENA_HEIGHT: int = 4000
 GRID_SPACING: int = 50
 
 
@@ -70,6 +72,7 @@ class Renderer:
 
     def __init__(self, camera: Camera) -> None:
         self._camera: Camera = camera
+        self._name_font: pygame.font.Font = pygame.font.SysFont("Arial", 14, bold=True)
 
     @property
     def camera(self) -> Camera:
@@ -212,8 +215,7 @@ class Renderer:
 
         # Draw name label above the head
         if snake.name:
-            font = pygame.font.SysFont("Arial", 14, bold=True)
-            name_surf = font.render(snake.name, True, (220, 220, 220))
+            name_surf = self._name_font.render(snake.name, True, (220, 220, 220))
             screen.blit(
                 name_surf,
                 (int(hx) - name_surf.get_width() // 2, int(hy) - 28),

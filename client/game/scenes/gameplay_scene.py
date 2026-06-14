@@ -173,6 +173,10 @@ class GameplayScene(Scene):
 
         self._current_direction = angle
 
+        # Reject NaN, Infinity, or other invalid float values.
+        if not math.isfinite(angle):
+            return
+
         # Client-side prediction — immediately update the local snake's direction
         self._interpolator.set_predicted_direction(angle)
 

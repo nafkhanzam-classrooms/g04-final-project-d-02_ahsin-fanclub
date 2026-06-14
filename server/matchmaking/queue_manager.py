@@ -58,8 +58,11 @@ class QueueManager:
         if player_id not in self._in_queue:
             return False
         self._in_queue.discard(player_id)
-        # Lazy removal — the deque still has the player, but they're
-        # no longer in _in_queue so dequeue() will skip them.
+        # Without this, the deque grows unbounded with stale entries
+        # that dequeue() and peek() must skip, causing O(n²) behavior.
+        stale_count = len(self._queue) - len(self._in_queue)
+        if stale_count > max(10, len(self._in_queue)):
+            self._queue = deque(pid for pid in self._queue if pid in self._in_queue)
         logger.info("Player %d left queue (size: %d)", player_id, self.size)
         return True
 

@@ -31,6 +31,8 @@ class LobbyScene(Scene):
         self._players: list[dict[str, Any]] = []
         self._room_state: dict[str, Any] = {}
         self._status_override: str | None = None
+        self._panel_header_font: pygame.font.Font = pygame.font.SysFont("Arial", 20, bold=True)
+        self._panel_row_font: pygame.font.Font = pygame.font.SysFont("Arial", 18)
 
     def enter(self) -> None:
         d = self.app.event_dispatcher
@@ -71,8 +73,8 @@ class LobbyScene(Scene):
         panel = pygame.Rect(140, 190, screen.get_width() - 280, screen.get_height() - 300)
         pygame.draw.rect(screen, (24, 26, 38), panel, border_radius=8)
         pygame.draw.rect(screen, (60, 70, 100), panel, 2, border_radius=8)
-        font = pygame.font.SysFont("Arial", 20, bold=True)
-        row_font = pygame.font.SysFont("Arial", 18)
+        font = self._panel_header_font
+        row_font = self._panel_row_font
         screen.blit(font.render("PLAYERS", True, (210, 220, 240)), (panel.x + 20, panel.y + 16))
         y = panel.y + 54
         for player in self._players:
@@ -91,7 +93,7 @@ class LobbyScene(Scene):
         host_id = data.get("host_player_id", -1)
         host_name = "Unknown"
         for player in self._players:
-            if player.get("is_host"):
+            if player.get("player_id") == host_id:
                 host_name = str(player.get("name", "Unknown"))
                 break
         self._host_label.text = f"Host: {host_name} ({host_id})"

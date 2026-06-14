@@ -58,6 +58,9 @@ class Room:
     room_id: str
     player_ids: list[int] = field(default_factory=list)
     state: RoomState = RoomState.WAITING
+    # The first player added becomes the host. If the host leaves, the next
+    # player in the list is promoted.
+    host_player_id: int = -1
     _game_world: GameWorld | None = field(default=None, init=False, repr=False)
     _game_task: asyncio.Task[None] | None = field(default=None, init=False, repr=False)
 
@@ -75,12 +78,16 @@ class Room:
         if player_id not in self.player_ids:
             self.player_ids.append(player_id)
             self._player_names[player_id] = name or f"Player {player_id}"
+            if self.host_player_id == -1:
+                self.host_player_id = player_id
 
     def remove_player(self, player_id: int) -> None:
         """Remove a player from the room."""
         if player_id in self.player_ids:
             self.player_ids.remove(player_id)
             self._player_names.pop(player_id, None)
+            if self.host_player_id == player_id:
+                self.host_player_id = self.player_ids[0] if self.player_ids else -1
 
         # If game is running, remove from simulation
         if self._game_world and self.state == RoomState.RUNNING:

@@ -80,8 +80,10 @@ class LoadingScene(Scene):
         pass  # No interactive elements
 
     def update(self, dt: float) -> None:
-        # Animate progress bar (purely visual, not tied to real loading)
-        self._progress = min(1.0, self._progress + dt * 0.5)
+        # MATCH_START_COUNTDOWN of 3.0 seconds. Previously used dt * 0.5
+        # which filled in ~2s (visual mismatch with 3.0s countdown).
+        # 1.0 / 3.0 ≈ 0.333 fills the bar in exactly 3.0 seconds.
+        self._progress = min(1.0, self._progress + dt * (1.0 / 3.0))
 
     def render(self, screen: pygame.Surface) -> None:
         screen.fill((10, 10, 24))

@@ -148,6 +148,11 @@ class JoinRoomModal:
         if self._join_btn.handle_event(event):
             return True
 
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if not self._panel.rect.collidepoint(event.pos):
+                self.close()
+                return False  # Allow event to propagate to scene below
+
         return True
 
     # ------------------------------------------------------------------

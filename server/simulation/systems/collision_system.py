@@ -56,6 +56,18 @@ class CollisionSystem:
                     dead.add(snake.player_id)
                     break
 
+        # Policy: both snakes die on head-on collision (mutual kill).
+        # This is checked separately to avoid order-dependent results.
+        for i, snake_a in enumerate(alive_snakes):
+            if snake_a.player_id in dead:
+                continue
+            for snake_b in alive_snakes[i + 1:]:
+                if snake_b.player_id in dead:
+                    continue
+                if self._check_head_vs_head(snake_a, snake_b):
+                    dead.add(snake_a.player_id)
+                    dead.add(snake_b.player_id)
+
         return dead
 
     @staticmethod
@@ -92,3 +104,16 @@ class CollisionSystem:
                 return True
 
         return False
+
+    @staticmethod
+    def _check_head_vs_head(a: Snake, b: Snake) -> bool:
+        """
+        Both snakes die on head-on collision (mutual kill policy).
+        Uses SNAKE_HEAD_RADIUS * 2 as the collision distance since
+        both entities are heads.
+        """
+        collision_dist = SNAKE_HEAD_RADIUS * 2
+        collision_dist_sq = collision_dist * collision_dist
+        dx = a.x - b.x
+        dy = a.y - b.y
+        return dx * dx + dy * dy <= collision_dist_sq

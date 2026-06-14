@@ -50,7 +50,10 @@ class WebSocketClient:
         self._recv_task: asyncio.Task[None] | None = None
         self._connected: bool = False
         self._ping_ms: float = 0.0
-        self._last_ping_time: float = 0.0
+        # _ping_send_time records when we sent the last PING, so that
+        # when the PONG arrives we can compute true round-trip latency.
+        self._ping_send_time: float = 0.0
+        self._ping_task: asyncio.Task[None] | None = None
         self._server_uri: str = DEFAULT_SERVER_URI
 
     # ----- Properties -----
@@ -99,6 +102,7 @@ class WebSocketClient:
             )
             self._connected = True
             self._recv_task = asyncio.create_task(self._recv_loop())
+            self._ping_task = asyncio.create_task(self._ping_loop())
             logger.info("Connected to %s", self._server_uri)
             return True
         except (OSError, websockets.exceptions.WebSocketException) as exc:
@@ -110,6 +114,12 @@ class WebSocketClient:
     async def close(self) -> None:
         """Gracefully close the connection."""
         self._connected = False
+        if self._ping_task and not self._ping_task.done():
+            self._ping_task.cancel()
+            try:
+                await self._ping_task
+            except asyncio.CancelledError:
+                pass
         if self._recv_task and not self._recv_task.done():
             self._recv_task.cancel()
             try:
@@ -132,7 +142,6 @@ class WebSocketClient:
             logger.warning("Cannot send — not connected")
             return
         try:
-            self._last_ping_time = time.monotonic()
             await self._ws.send(data)
         except websockets.exceptions.WebSocketException as exc:
             logger.error("Send error: %s", exc)
@@ -162,12 +171,13 @@ class WebSocketClient:
                 else:
                     continue
 
-                # Measure latency on every received message
-                now = time.monotonic()
-                if self._last_ping_time > 0:
-                    self._ping_ms = (now - self._last_ping_time) * 1000.0
-
                 msg_type = message.get("type", "unknown")
+
+                if msg_type == "pong" and self._ping_send_time > 0:
+                    self._ping_ms = (time.monotonic() - self._ping_send_time) * 1000.0
+                    self._ping_send_time = 0.0
+                    continue  # Don't dispatch pong to game scenes
+
                 self._dispatcher.dispatch(msg_type, message)
 
         except websockets.exceptions.ConnectionClosed as exc:
@@ -185,8 +195,24 @@ class WebSocketClient:
         self._connected = False
         self._ws = None
         self._recv_task = None
+        if self._ping_task and not self._ping_task.done():
+            self._ping_task.cancel()
+        self._ping_task = None
         if was_connected:
             self._dispatcher.dispatch(
                 "error",
                 {"message": "Lost connection to server"},
             )
+
+    async def _ping_loop(self) -> None:
+        """Send a PING to the server every 2 seconds for RTT measurement."""
+        try:
+            while self._connected:
+                await asyncio.sleep(2.0)
+                if self._connected and self._ws:
+                    self._ping_send_time = time.monotonic()
+                    await self._ws.send(encode_message({"type": "ping"}))
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            pass

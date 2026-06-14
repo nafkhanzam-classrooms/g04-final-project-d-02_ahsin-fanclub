@@ -113,7 +113,8 @@ class RoomManager:
 
     def build_room_state(self, room: Room) -> dict[str, Any]:
         """Build a client-facing room state payload."""
-        host_player_id = room.player_ids[0] if room.player_ids else -1
+        # instead of relying on player_ids[0] which is fragile.
+        host_player_id = room.host_player_id
         players = [
             RoomPlayer(
                 player_id=pid,

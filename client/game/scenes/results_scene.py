@@ -62,6 +62,10 @@ class ResultsScene(Scene):
             font_size=20,
         )
 
+        self._winner_font: pygame.font.Font = pygame.font.SysFont("Arial", 32, bold=True)
+        self._header_font: pygame.font.Font = pygame.font.SysFont("Arial", 18, bold=True)
+        self._row_font: pygame.font.Font = pygame.font.SysFont("Arial", 20)
+
         # Match data (populated in enter())
         self._winner_name: str = ""
         self._rankings: list[dict[str, Any]] = []
@@ -104,8 +108,7 @@ class ResultsScene(Scene):
         self._title.render(screen)
 
         # Winner announcement
-        winner_font = pygame.font.SysFont("Arial", 32, bold=True)
-        winner_surf = winner_font.render(
+        winner_surf = self._winner_font.render(
             f"🏆  Winner: {self._winner_name}", True, COLOR_WINNER
         )
         screen.blit(
@@ -122,8 +125,8 @@ class ResultsScene(Scene):
         self, screen: pygame.Surface, sw: int, sh: int
     ) -> None:
         """Draw the ranking table."""
-        header_font = pygame.font.SysFont("Arial", 18, bold=True)
-        row_font = pygame.font.SysFont("Arial", 20)
+        header_font = self._header_font
+        row_font = self._row_font
 
         table_top = 200
         row_height = 45

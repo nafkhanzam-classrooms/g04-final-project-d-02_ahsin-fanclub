@@ -127,6 +127,8 @@ class MenuScene(Scene):
             font_size=26,
         )
 
+        self._version_font: pygame.font.Font = pygame.font.SysFont("Arial", 12)
+
         # Decorative floating particles
         self._particles: list[dict] = []
         for _ in range(40):
@@ -217,8 +219,7 @@ class MenuScene(Scene):
             self._error_label.render(screen)
 
         # Version text
-        font_tiny = pygame.font.SysFont("Arial", 12)
-        ver = font_tiny.render("v0.1.0 — University Project", True, (60, 60, 80))
+        ver = self._version_font.render("v0.1.0 — University Project", True, (60, 60, 80))
         screen.blit(ver, (sw // 2 - ver.get_width() // 2, sh - 30))
 
     # ----- Callbacks -----
